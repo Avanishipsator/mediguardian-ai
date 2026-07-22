@@ -37,8 +37,8 @@ springdoc:
   packagesToScan: com.mediguardian
 
 aws:
-  access-key: ${AWS_ACCESS_KEY}
-  secret-key: ${AWS_SECRET_KEY}
+  access-key: ${AWS_ACCESS_KEY:none}
+  secret-key: ${AWS_SECRET_KEY:none}
   region: ${AWS_REGION:ap-south-1}
   s3:
     bucket: ${AWS_S3_BUCKET:lakshdweep-stage-files}
