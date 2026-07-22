@@ -44,6 +44,22 @@ public class AwsS3StorageServiceImpl implements StorageService {
     }
 
     @Override
+    public String uploadFile(byte[] fileData, String fileKey, String contentType) {
+        try {
+            PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(fileKey)
+                    .contentType(contentType)
+                    .build();
+
+            s3Client.putObject(putObjectRequest, RequestBody.fromBytes(fileData));
+            return fileKey;
+        } catch (S3Exception e) {
+            throw new BusinessException("Failed to upload file to S3: " + e.getMessage(), ErrorCodes.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @Override
     public String generatePresignedUrl(String fileKey) {
         if (fileKey == null || fileKey.isEmpty()) {
             return null;

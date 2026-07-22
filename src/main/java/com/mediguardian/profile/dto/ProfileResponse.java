@@ -21,4 +21,7 @@ public class ProfileResponse {
     private String emergencyContact;
     private List<String> allergies;
     private List<String> diseases;
+    private UUID emergencyId;
+    private String qrCodeUrl;
+    private String profilePhotoUrl;
 }

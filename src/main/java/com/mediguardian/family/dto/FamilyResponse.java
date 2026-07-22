@@ -22,5 +22,6 @@ public class FamilyResponse {
         private String lastName;
         private Relationship relationshipToHead;
         private boolean canViewMedicalHistory;
+        private com.mediguardian.family.entity.FamilyMemberStatus status;
     }
 }

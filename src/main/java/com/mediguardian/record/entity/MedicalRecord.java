@@ -34,6 +34,11 @@ public class MedicalRecord extends BaseEntity {
 
     private String description;
 
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    @Column(nullable = false)
+    private RecordVisibility visibility = RecordVisibility.PRIVATE;
+
     @Column(nullable = false)
     private String s3FileKey;
 

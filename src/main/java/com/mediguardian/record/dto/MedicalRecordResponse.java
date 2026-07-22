@@ -6,6 +6,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import com.mediguardian.record.entity.RecordVisibility;
+
 import java.time.Instant;
 import java.util.UUID;
 
@@ -19,6 +21,7 @@ public class MedicalRecordResponse {
     private String title;
     private RecordType type;
     private String description;
+    private RecordVisibility visibility;
     private Instant uploadDate;
     private String presignedUrl;
 }

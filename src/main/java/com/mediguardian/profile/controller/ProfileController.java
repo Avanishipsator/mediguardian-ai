@@ -61,4 +61,14 @@ public class ProfileController {
         profileService.claimProfile(id, request);
         return ResponseEntity.ok(ApiResponse.success(null, "Profile claimed successfully. Please login and change the temporary password."));
     }
+
+    @PostMapping(value = "/{id}/photo", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Upload a profile photo")
+    public ResponseEntity<ApiResponse<ProfileResponse>> uploadProfilePhoto(
+            @PathVariable UUID id,
+            @RequestParam("file") org.springframework.web.multipart.MultipartFile file
+    ) {
+        ProfileResponse response = profileService.uploadProfilePhoto(id, file);
+        return ResponseEntity.ok(ApiResponse.success(response, "Profile photo uploaded successfully"));
+    }
 }

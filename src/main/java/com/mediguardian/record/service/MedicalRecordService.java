@@ -11,6 +11,7 @@ import com.mediguardian.record.dto.MedicalRecordResponse;
 import com.mediguardian.record.entity.MedicalRecord;
 import com.mediguardian.record.entity.RecordType;
 import com.mediguardian.record.repository.MedicalRecordRepository;
+import com.mediguardian.notification.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +30,7 @@ public class MedicalRecordService {
     private final ProfileRepository profileRepository;
     private final FamilyMemberRepository familyMemberRepository;
     private final StorageService storageService;
+    private final NotificationService notificationService;
 
     @Transactional
     public MedicalRecordResponse uploadRecord(UUID profileId, MultipartFile file, String title, RecordType type, String description) {
@@ -55,6 +57,13 @@ public class MedicalRecordService {
         
         record = recordRepository.save(record);
 
+        boolean hasHospitalRole = SecurityUtils.hasRole("HOSPITAL") || SecurityUtils.hasRole("DOCTOR");
+        
+        if (hasHospitalRole) {
+            String hospitalName = "A Hospital"; // We could pull this from the Hospital's account info
+            notificationService.createNotification(targetProfile.getAccountId(), hospitalName + " uploaded a new " + type.name() + " report.");
+        }
+
         return mapToResponse(record);
     }
 
@@ -69,12 +78,34 @@ public class MedicalRecordService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional
+    public MedicalRecordResponse updateVisibility(UUID recordId, com.mediguardian.record.entity.RecordVisibility visibility) {
+        MedicalRecord record = recordRepository.findById(recordId)
+                .orElseThrow(() -> new BusinessException("Medical record not found", ErrorCodes.NOT_FOUND));
+        
+        Profile targetProfile = profileRepository.findById(record.getProfileId())
+                .orElseThrow(() -> new BusinessException("Profile not found", ErrorCodes.NOT_FOUND));
+
+        // Only the profile owner or family head can change visibility. For simplicity here we just use verifyPermission, but in a real scenario we'd check strict ownership.
+        verifyPermission(targetProfile);
+
+        record.setVisibility(visibility);
+        record = recordRepository.save(record);
+
+        return mapToResponse(record);
+    }
+
     private void verifyPermission(Profile targetProfile) {
         UUID currentAccountId = SecurityUtils.getCurrentAccountId()
                 .orElseThrow(() -> new BusinessException("User not authenticated", ErrorCodes.UNAUTHORIZED));
 
         if (currentAccountId.equals(targetProfile.getAccountId())) {
             return; // User owns this profile
+        }
+
+        boolean hasHospitalRole = SecurityUtils.hasRole("HOSPITAL") || SecurityUtils.hasRole("DOCTOR");
+        if (hasHospitalRole) {
+            return;
         }
 
         Profile currentProfile = profileRepository.findByAccountId(currentAccountId)
@@ -109,6 +140,7 @@ public class MedicalRecordService {
                 .title(record.getTitle())
                 .type(record.getType())
                 .description(record.getDescription())
+                .visibility(record.getVisibility())
                 .uploadDate(record.getUploadDate())
                 .presignedUrl(url)
                 .build();

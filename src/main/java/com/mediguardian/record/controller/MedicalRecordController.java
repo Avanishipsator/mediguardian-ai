@@ -43,4 +43,14 @@ public class MedicalRecordController {
     ) {
         return ResponseEntity.ok(ApiResponse.success(recordService.getRecordsForProfile(profileId), "Records retrieved successfully"));
     }
+
+    @PatchMapping("/records/{recordId}/visibility")
+    @Operation(summary = "Update the visibility of a medical record")
+    public ResponseEntity<ApiResponse<MedicalRecordResponse>> updateVisibility(
+            @PathVariable UUID recordId,
+            @RequestParam com.mediguardian.record.entity.RecordVisibility visibility
+    ) {
+        MedicalRecordResponse response = recordService.updateVisibility(recordId, visibility);
+        return ResponseEntity.ok(ApiResponse.success(response, "Visibility updated successfully"));
+    }
 }

@@ -59,4 +59,11 @@ public class Profile extends BaseEntity {
     @Column(name = "disease")
     @Builder.Default
     private List<String> diseases = new ArrayList<>();
+
+    @Column(unique = true)
+    private UUID emergencyId;
+
+    private String qrCodeUrl;
+
+    private String profilePhotoUrl;
 }

@@ -45,4 +45,23 @@ public class FamilyController {
     public ResponseEntity<ApiResponse<List<FamilyResponse>>> getMyFamilies() {
         return ResponseEntity.ok(ApiResponse.success(familyService.getMyFamilies(), "Families retrieved successfully"));
     }
+
+    @DeleteMapping("/{familyId}/members/{profileId}")
+    @Operation(summary = "Remove a family member (Only for Family Head)")
+    public ResponseEntity<ApiResponse<Void>> removeFamilyMember(
+            @PathVariable UUID familyId,
+            @PathVariable UUID profileId
+    ) {
+        familyService.removeFamilyMember(familyId, profileId);
+        return ResponseEntity.ok(ApiResponse.success(null, "Member removed successfully"));
+    }
+
+    @PostMapping("/{familyId}/members/{profileId}/approve")
+    @Operation(summary = "Approve a pending family member, such as a newborn (Only for Family Head)")
+    public ResponseEntity<ApiResponse<FamilyResponse>> approveFamilyMember(
+            @PathVariable UUID familyId,
+            @PathVariable UUID profileId
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(familyService.approveFamilyMember(familyId, profileId), "Member approved successfully"));
+    }
 }

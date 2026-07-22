@@ -99,6 +99,53 @@ public class FamilyService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional
+    public void removeFamilyMember(UUID familyId, UUID memberProfileId) {
+        UUID accountId = SecurityUtils.getCurrentAccountId()
+                .orElseThrow(() -> new BusinessException("User not authenticated", ErrorCodes.UNAUTHORIZED));
+        Profile headProfile = profileRepository.findByAccountId(accountId)
+                .orElseThrow(() -> new BusinessException("Primary profile not found.", ErrorCodes.VALIDATION_ERROR));
+
+        Family family = familyRepository.findById(familyId)
+                .orElseThrow(() -> new BusinessException("Family not found", ErrorCodes.NOT_FOUND));
+
+        if (!family.getHeadProfileId().equals(headProfile.getId())) {
+            throw new BusinessException("Only the Head of the Family can remove members", ErrorCodes.FORBIDDEN);
+        }
+
+        FamilyMember member = familyMemberRepository.findByFamilyIdAndProfileId(familyId, memberProfileId)
+                .orElseThrow(() -> new BusinessException("Member not found in family", ErrorCodes.NOT_FOUND));
+
+        if (member.getRelationshipToHead() == Relationship.SELF) {
+            throw new BusinessException("Cannot remove the head of the family", ErrorCodes.VALIDATION_ERROR);
+        }
+
+        familyMemberRepository.delete(member);
+    }
+
+    @Transactional
+    public FamilyResponse approveFamilyMember(UUID familyId, UUID memberProfileId) {
+        UUID accountId = SecurityUtils.getCurrentAccountId()
+                .orElseThrow(() -> new BusinessException("User not authenticated", ErrorCodes.UNAUTHORIZED));
+        Profile headProfile = profileRepository.findByAccountId(accountId)
+                .orElseThrow(() -> new BusinessException("Primary profile not found.", ErrorCodes.VALIDATION_ERROR));
+
+        Family family = familyRepository.findById(familyId)
+                .orElseThrow(() -> new BusinessException("Family not found", ErrorCodes.NOT_FOUND));
+
+        if (!family.getHeadProfileId().equals(headProfile.getId())) {
+            throw new BusinessException("Only the Head of the Family can approve members", ErrorCodes.FORBIDDEN);
+        }
+
+        FamilyMember member = familyMemberRepository.findByFamilyIdAndProfileId(familyId, memberProfileId)
+                .orElseThrow(() -> new BusinessException("Member not found in family", ErrorCodes.NOT_FOUND));
+
+        member.setStatus(com.mediguardian.family.entity.FamilyMemberStatus.APPROVED);
+        familyMemberRepository.save(member);
+
+        return mapToResponse(family);
+    }
+
     private FamilyResponse mapToResponse(Family family) {
         List<FamilyMember> members = familyMemberRepository.findByFamilyId(family.getId());
         
@@ -110,6 +157,7 @@ public class FamilyService {
                     .lastName(p != null ? p.getLastName() : "Unknown")
                     .relationshipToHead(m.getRelationshipToHead())
                     .canViewMedicalHistory(m.isCanViewMedicalHistory())
+                    .status(m.getStatus())
                     .build();
         }).collect(Collectors.toList());
 

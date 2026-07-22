@@ -35,4 +35,9 @@ public class FamilyMember extends BaseEntity {
 
     @Column(nullable = false)
     private boolean canViewMedicalHistory;
+
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    @Column(nullable = false)
+    private FamilyMemberStatus status = FamilyMemberStatus.APPROVED;
 }
