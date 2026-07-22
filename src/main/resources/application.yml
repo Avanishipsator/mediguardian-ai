@@ -15,7 +15,12 @@ spring:
     properties:
       hibernate:
         format_sql: true
-        dialect: org.hibernate.dialect.PostgreSQLDialect
+  ai:
+    vertex:
+      ai:
+        gemini:
+          project-id: ${GEMINI_PROJECT_ID:mock-project-id}
+          location: ${GEMINI_LOCATION:us-central1}
 
 server:
   port: ${PORT:8081}
