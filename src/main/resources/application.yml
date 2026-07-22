@@ -1,0 +1,37 @@
+spring:
+  application:
+    name: mediguardian-ai
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/mediguardian}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update # For hackathon, 'update' is fine, normally 'validate' with Flyway, but no Flyway is used here.
+    show-sql: ${DB_SHOW_SQL:true}
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+server:
+  port: ${PORT:8081}
+  error:
+    include-message: always
+    include-binding-errors: always
+    include-stacktrace: never
+
+jwt:
+  secret: ${JWT_SECRET:4d82-4995-bbc7-dc6b3e6d46ba-super-secret-key-for-mediguardian-ai-hackathon-project-2026}
+  expiration: ${JWT_EXPIRATION:86400000} # 24 hours in ms
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operationsSorter: method
+  packagesToScan: com.mediguardian
