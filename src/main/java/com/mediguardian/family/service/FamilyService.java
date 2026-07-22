@@ -35,17 +35,23 @@ public class FamilyService {
                 .orElseThrow(() -> new BusinessException("User not authenticated", ErrorCodes.UNAUTHORIZED));
 
         Profile headProfile = profileRepository.findByAccountId(accountId)
-                .orElseThrow(() -> new BusinessException("Primary profile not found. Please create your profile first.", ErrorCodes.VALIDATION_ERROR));
+                .orElseThrow(() -> new BusinessException("Primary profile not found. Please create your profile first.", ErrorCodes.NOT_FOUND));
+
+        return createFamilyGroupForAccount(request.getName(), headProfile.getId());
+    }
+
+    @Transactional
+    public FamilyResponse createFamilyGroupForAccount(String familyName, UUID headProfileId) {
 
         Family family = Family.builder()
-                .name(request.getName())
-                .headProfileId(headProfile.getId())
+                .name(familyName)
+                .headProfileId(headProfileId)
                 .build();
         family = familyRepository.save(family);
 
         FamilyMember selfMember = FamilyMember.builder()
                 .familyId(family.getId())
-                .profileId(headProfile.getId())
+                .profileId(headProfileId)
                 .relationshipToHead(Relationship.SELF)
                 .canViewMedicalHistory(true)
                 .build();
@@ -59,7 +65,7 @@ public class FamilyService {
         UUID accountId = SecurityUtils.getCurrentAccountId()
                 .orElseThrow(() -> new BusinessException("User not authenticated", ErrorCodes.UNAUTHORIZED));
         Profile headProfile = profileRepository.findByAccountId(accountId)
-                .orElseThrow(() -> new BusinessException("Primary profile not found.", ErrorCodes.VALIDATION_ERROR));
+                .orElseThrow(() -> new BusinessException("Primary profile not found.", ErrorCodes.NOT_FOUND));
 
         Family family = familyRepository.findById(familyId)
                 .orElseThrow(() -> new BusinessException("Family not found", ErrorCodes.NOT_FOUND));
@@ -88,7 +94,7 @@ public class FamilyService {
                 .orElseThrow(() -> new BusinessException("User not authenticated", ErrorCodes.UNAUTHORIZED));
 
         Profile headProfile = profileRepository.findByAccountId(accountId)
-                .orElseThrow(() -> new BusinessException("Primary profile not found.", ErrorCodes.VALIDATION_ERROR));
+                .orElseThrow(() -> new BusinessException("Primary profile not found.", ErrorCodes.NOT_FOUND));
 
         List<FamilyMember> memberships = familyMemberRepository.findByProfileId(headProfile.getId());
         
@@ -104,7 +110,7 @@ public class FamilyService {
         UUID accountId = SecurityUtils.getCurrentAccountId()
                 .orElseThrow(() -> new BusinessException("User not authenticated", ErrorCodes.UNAUTHORIZED));
         Profile headProfile = profileRepository.findByAccountId(accountId)
-                .orElseThrow(() -> new BusinessException("Primary profile not found.", ErrorCodes.VALIDATION_ERROR));
+                .orElseThrow(() -> new BusinessException("Primary profile not found.", ErrorCodes.NOT_FOUND));
 
         Family family = familyRepository.findById(familyId)
                 .orElseThrow(() -> new BusinessException("Family not found", ErrorCodes.NOT_FOUND));
@@ -128,7 +134,7 @@ public class FamilyService {
         UUID accountId = SecurityUtils.getCurrentAccountId()
                 .orElseThrow(() -> new BusinessException("User not authenticated", ErrorCodes.UNAUTHORIZED));
         Profile headProfile = profileRepository.findByAccountId(accountId)
-                .orElseThrow(() -> new BusinessException("Primary profile not found.", ErrorCodes.VALIDATION_ERROR));
+                .orElseThrow(() -> new BusinessException("Primary profile not found.", ErrorCodes.NOT_FOUND));
 
         Family family = familyRepository.findById(familyId)
                 .orElseThrow(() -> new BusinessException("Family not found", ErrorCodes.NOT_FOUND));

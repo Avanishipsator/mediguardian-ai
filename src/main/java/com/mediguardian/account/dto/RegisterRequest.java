@@ -17,4 +17,7 @@ public class RegisterRequest {
 
     @NotNull(message = "Role is required")
     private Role role;
+
+    // Optional for Hospital roles, required for Patient roles (handled in service)
+    private com.mediguardian.profile.dto.ProfileRequest profile;
 }

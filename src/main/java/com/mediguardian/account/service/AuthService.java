@@ -9,7 +9,10 @@ import com.mediguardian.core.common.ErrorCodes;
 import com.mediguardian.core.exception.BusinessException;
 import com.mediguardian.core.security.CustomUserDetails;
 import com.mediguardian.core.security.JwtService;
+import com.mediguardian.profile.service.ProfileService;
+import com.mediguardian.family.service.FamilyService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -17,13 +20,42 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@RequiredArgsConstructor
 public class AuthService {
 
     private final AccountRepository accountRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
+    private final ProfileService profileService;
+    private final FamilyService familyService;
+    private final com.mediguardian.core.security.RevokedTokenRepository revokedTokenRepository;
+
+    public AuthService(AccountRepository accountRepository, 
+                       PasswordEncoder passwordEncoder, 
+                       JwtService jwtService, 
+                       AuthenticationManager authenticationManager, 
+                       @Lazy ProfileService profileService, 
+                       @Lazy FamilyService familyService, 
+                       com.mediguardian.core.security.RevokedTokenRepository revokedTokenRepository) {
+        this.accountRepository = accountRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.jwtService = jwtService;
+        this.authenticationManager = authenticationManager;
+        this.profileService = profileService;
+        this.familyService = familyService;
+        this.revokedTokenRepository = revokedTokenRepository;
+    }
+
+    @Transactional
+    public void logout(String token) {
+        if (token != null && token.startsWith("Bearer ")) {
+            token = token.substring(7);
+        }
+        
+        if (token != null && revokedTokenRepository.findByToken(token).isEmpty()) {
+            revokedTokenRepository.save(com.mediguardian.core.security.RevokedToken.builder().token(token).build());
+        }
+    }
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
@@ -42,6 +74,16 @@ public class AuthService {
                 .build();
                 
         accountRepository.save(account);
+        
+        // If it's a PATIENT (USER), create Profile and Family group
+        if (request.getRole() == com.mediguardian.account.entity.Role.USER) {
+            if (request.getProfile() == null) {
+                throw new BusinessException("Profile details are required for patient registration", ErrorCodes.VALIDATION_ERROR);
+            }
+            com.mediguardian.profile.dto.ProfileResponse profile = profileService.createProfileForAccount(request.getProfile(), account.getId());
+            String familyName = (profile.getLastName() != null ? profile.getLastName() : profile.getFirstName()) + " Family";
+            familyService.createFamilyGroupForAccount(familyName, profile.getId());
+        }
 
         var userDetails = new CustomUserDetails(account);
         var jwtToken = jwtService.generateToken(userDetails);

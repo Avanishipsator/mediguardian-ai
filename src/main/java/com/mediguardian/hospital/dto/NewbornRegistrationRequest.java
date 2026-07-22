@@ -10,8 +10,8 @@ public class NewbornRegistrationRequest {
     private String firstName;
     private String lastName;
     private LocalDate dateOfBirth;
-    private String gender;
-    private String bloodGroup;
+    private com.mediguardian.profile.entity.Gender gender;
+    private com.mediguardian.profile.entity.BloodGroup bloodGroup;
     private Double weight;
     private Double height;
 }

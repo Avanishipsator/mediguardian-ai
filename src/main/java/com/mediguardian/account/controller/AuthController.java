@@ -48,4 +48,13 @@ public class AuthController {
         authService.changePassword(request);
         return ResponseEntity.ok(ApiResponse.success(null, "Password changed successfully"));
     }
+
+    @PostMapping("/logout")
+    @Operation(summary = "Logout from the platform")
+    public ResponseEntity<ApiResponse<Void>> logout(
+            @org.springframework.web.bind.annotation.RequestHeader(value = "Authorization", required = false) String token
+    ) {
+        authService.logout(token);
+        return ResponseEntity.ok(ApiResponse.success(null, "Logged out successfully"));
+    }
 }

@@ -7,6 +7,9 @@ import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Table;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Embedded;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -38,15 +41,28 @@ public class Profile extends BaseEntity {
     @Column(nullable = false)
     private LocalDate dateOfBirth;
 
-    private String gender;
+    @Enumerated(EnumType.STRING)
+    private Gender gender;
     
-    private String bloodGroup;
+    @Enumerated(EnumType.STRING)
+    private BloodGroup bloodGroup;
+    
+    private String mobile; // added for dependents
     
     private Double height; // cm
     
     private Double weight; // kg
 
-    private String emergencyContact;
+    @ElementCollection
+    @CollectionTable(name = "profile_emergency_contacts", joinColumns = @JoinColumn(name = "profile_id"))
+    @Builder.Default
+    private List<EmergencyContact> emergencyContacts = new ArrayList<>();
+
+    @Embedded
+    private PrimaryDoctor primaryDoctor;
+
+    @Embedded
+    private Lifestyle lifestyle;
 
     @ElementCollection
     @CollectionTable(name = "profile_allergies", joinColumns = @JoinColumn(name = "profile_id"))
@@ -55,10 +71,46 @@ public class Profile extends BaseEntity {
     private List<String> allergies = new ArrayList<>();
 
     @ElementCollection
-    @CollectionTable(name = "profile_diseases", joinColumns = @JoinColumn(name = "profile_id"))
-    @Column(name = "disease")
+    @CollectionTable(name = "profile_conditions", joinColumns = @JoinColumn(name = "profile_id"))
+    @Column(name = "condition")
     @Builder.Default
-    private List<String> diseases = new ArrayList<>();
+    private List<String> conditions = new ArrayList<>();
+
+    @ElementCollection
+    @CollectionTable(name = "profile_medications", joinColumns = @JoinColumn(name = "profile_id"))
+    @Column(name = "medication")
+    @Builder.Default
+    private List<String> medications = new ArrayList<>();
+
+    @ElementCollection
+    @CollectionTable(name = "profile_surgeries", joinColumns = @JoinColumn(name = "profile_id"))
+    @Column(name = "surgery")
+    @Builder.Default
+    private List<String> surgeries = new ArrayList<>();
+
+    @ElementCollection
+    @CollectionTable(name = "profile_implants", joinColumns = @JoinColumn(name = "profile_id"))
+    @Column(name = "implant")
+    @Builder.Default
+    private List<String> implants = new ArrayList<>();
+
+    @ElementCollection
+    @CollectionTable(name = "profile_medical_devices", joinColumns = @JoinColumn(name = "profile_id"))
+    @Column(name = "medical_device")
+    @Builder.Default
+    private List<String> medicalDevices = new ArrayList<>();
+
+    @ElementCollection
+    @CollectionTable(name = "profile_vaccinations", joinColumns = @JoinColumn(name = "profile_id"))
+    @Column(name = "vaccination")
+    @Builder.Default
+    private List<String> vaccinations = new ArrayList<>();
+
+    @ElementCollection
+    @CollectionTable(name = "profile_family_history", joinColumns = @JoinColumn(name = "profile_id"))
+    @Column(name = "family_history_item")
+    @Builder.Default
+    private List<String> familyHistory = new ArrayList<>();
 
     @Column(unique = true)
     private UUID emergencyId;

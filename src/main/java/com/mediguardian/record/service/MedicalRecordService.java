@@ -109,7 +109,7 @@ public class MedicalRecordService {
         }
 
         Profile currentProfile = profileRepository.findByAccountId(currentAccountId)
-                .orElseThrow(() -> new BusinessException("Your profile not found", ErrorCodes.VALIDATION_ERROR));
+                .orElseThrow(() -> new BusinessException("Your profile not found", ErrorCodes.NOT_FOUND));
 
         List<FamilyMember> targetMemberships = familyMemberRepository.findByProfileId(targetProfile.getId());
         List<FamilyMember> currentMemberships = familyMemberRepository.findByProfileId(currentProfile.getId());

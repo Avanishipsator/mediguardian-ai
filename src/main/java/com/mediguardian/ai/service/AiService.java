@@ -69,11 +69,11 @@ public class AiService {
                 Gender: %s
                 Blood Group: %s
                 Allergies: %s
-                Chronic Diseases: %s
+                Conditions: %s
                 """, profile.getFirstName(), profile.getLastName(), profile.getDateOfBirth(), 
                 profile.getGender(), profile.getBloodGroup(), 
                 String.join(", ", profile.getAllergies()), 
-                String.join(", ", profile.getDiseases()));
+                String.join(", ", profile.getConditions()));
 
         String promptText = """
                 You are a critical care emergency AI assistant assisting a doctor.

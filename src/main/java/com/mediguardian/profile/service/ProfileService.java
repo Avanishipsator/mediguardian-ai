@@ -11,6 +11,8 @@ import com.mediguardian.core.exception.BusinessException;
 import com.mediguardian.profile.dto.ClaimProfileRequest;
 import com.mediguardian.profile.dto.ProfileRequest;
 import com.mediguardian.profile.dto.ProfileResponse;
+import com.mediguardian.profile.entity.BloodGroup;
+import com.mediguardian.profile.entity.Gender;
 import com.mediguardian.profile.entity.Profile;
 import com.mediguardian.profile.repository.ProfileRepository;
 import com.mediguardian.record.service.StorageService;
@@ -23,15 +25,25 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.UUID;
 
 @Service
-@RequiredArgsConstructor
 public class ProfileService {
-
     private final ProfileRepository profileRepository;
     private final AuthService authService;
     private final AccountRepository accountRepository;
     private final QrCodeGenerator qrCodeGenerator;
     private final StorageService storageService;
     
+    public ProfileService(ProfileRepository profileRepository, 
+                          @org.springframework.context.annotation.Lazy AuthService authService, 
+                          AccountRepository accountRepository, 
+                          QrCodeGenerator qrCodeGenerator, 
+                          StorageService storageService) {
+        this.profileRepository = profileRepository;
+        this.authService = authService;
+        this.accountRepository = accountRepository;
+        this.qrCodeGenerator = qrCodeGenerator;
+        this.storageService = storageService;
+    }
+
     @Value("${server.url:http://localhost:8081}")
     private String serverUrl;
 
@@ -41,7 +53,13 @@ public class ProfileService {
         if (isSelf) {
             accountId = SecurityUtils.getCurrentAccountId()
                     .orElseThrow(() -> new BusinessException("User not authenticated", ErrorCodes.UNAUTHORIZED));
-            
+        }
+        return createProfileForAccount(request, accountId);
+    }
+
+    @Transactional
+    public ProfileResponse createProfileForAccount(ProfileRequest request, UUID accountId) {
+        if (accountId != null) {
             if (profileRepository.findByAccountId(accountId).isPresent()) {
                 throw new BusinessException("Account already has a primary profile", ErrorCodes.VALIDATION_ERROR);
             }
@@ -54,13 +72,22 @@ public class ProfileService {
                 .firstName(request.getFirstName())
                 .lastName(request.getLastName())
                 .dateOfBirth(request.getDateOfBirth())
-                .gender(request.getGender())
-                .bloodGroup(request.getBloodGroup())
+                .gender(request.getGender() != null ? Gender.valueOf(request.getGender()) : null)
+                .bloodGroup(request.getBloodGroup() != null ? BloodGroup.valueOf(request.getBloodGroup()) : null)
                 .height(request.getHeight())
                 .weight(request.getWeight())
-                .emergencyContact(request.getEmergencyContact())
+                .mobile(request.getMobile())
+                .emergencyContacts(request.getEmergencyContacts())
+                .primaryDoctor(request.getPrimaryDoctor())
+                .lifestyle(request.getLifestyle())
                 .allergies(request.getAllergies())
-                .diseases(request.getDiseases())
+                .conditions(request.getConditions())
+                .medications(request.getMedications())
+                .surgeries(request.getSurgeries())
+                .implants(request.getImplants())
+                .medicalDevices(request.getMedicalDevices())
+                .vaccinations(request.getVaccinations())
+                .familyHistory(request.getFamilyHistory())
                 .emergencyId(emergencyId)
                 .build();
 
@@ -134,13 +161,22 @@ public class ProfileService {
                 .firstName(profile.getFirstName())
                 .lastName(profile.getLastName())
                 .dateOfBirth(profile.getDateOfBirth())
-                .gender(profile.getGender())
-                .bloodGroup(profile.getBloodGroup())
+                .gender(profile.getGender() != null ? profile.getGender().name() : null)
+                .bloodGroup(profile.getBloodGroup() != null ? profile.getBloodGroup().name() : null)
                 .height(profile.getHeight())
                 .weight(profile.getWeight())
-                .emergencyContact(profile.getEmergencyContact())
+                .mobile(profile.getMobile())
+                .emergencyContacts(profile.getEmergencyContacts())
+                .primaryDoctor(profile.getPrimaryDoctor())
+                .lifestyle(profile.getLifestyle())
                 .allergies(profile.getAllergies())
-                .diseases(profile.getDiseases())
+                .conditions(profile.getConditions())
+                .medications(profile.getMedications())
+                .surgeries(profile.getSurgeries())
+                .implants(profile.getImplants())
+                .medicalDevices(profile.getMedicalDevices())
+                .vaccinations(profile.getVaccinations())
+                .familyHistory(profile.getFamilyHistory())
                 .emergencyId(profile.getEmergencyId())
                 .qrCodeUrl(qrCodeUrl)
                 .profilePhotoUrl(profilePhotoUrl)

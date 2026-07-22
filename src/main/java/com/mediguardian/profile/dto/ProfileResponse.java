@@ -18,9 +18,21 @@ public class ProfileResponse {
     private String bloodGroup;
     private Double height;
     private Double weight;
-    private String emergencyContact;
+    private String mobile;
+    
+    private List<com.mediguardian.profile.entity.EmergencyContact> emergencyContacts;
+    private com.mediguardian.profile.entity.PrimaryDoctor primaryDoctor;
+    private com.mediguardian.profile.entity.Lifestyle lifestyle;
+
     private List<String> allergies;
-    private List<String> diseases;
+    private List<String> conditions;
+    private List<String> medications;
+    private List<String> surgeries;
+    private List<String> implants;
+    private List<String> medicalDevices;
+    private List<String> vaccinations;
+    private List<String> familyHistory;
+
     private UUID emergencyId;
     private String qrCodeUrl;
     private String profilePhotoUrl;

@@ -13,7 +13,7 @@ public class PatientSearchResponse {
     private String firstName;
     private String lastName;
     private LocalDate dateOfBirth;
-    private String gender;
+    private com.mediguardian.profile.entity.Gender gender;
     private String mobileNumber;
     private UUID emergencyId;
 }

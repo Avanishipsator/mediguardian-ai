@@ -23,6 +23,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final CustomUserDetailsService userDetailsService;
+    private final RevokedTokenRepository revokedTokenRepository;
     private static final Logger logger = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
 
     @Override
@@ -42,6 +43,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         jwt = authHeader.substring(7);
+
+        if (revokedTokenRepository.findByToken(jwt).isPresent()) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         try {
             userIdentifier = jwtService.extractUsername(jwt);
             if (userIdentifier != null && SecurityContextHolder.getContext().getAuthentication() == null) {
