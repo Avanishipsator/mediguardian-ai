@@ -75,10 +75,10 @@ public class AuthService {
                 
         accountRepository.save(account);
         
-        // If it's a PATIENT (USER), create Profile and Family group
-        if (request.getRole() == com.mediguardian.account.entity.Role.USER) {
+        // If it's a PATIENT (USER) or DOCTOR, create Profile and Family group
+        if (request.getRole() == com.mediguardian.account.entity.Role.USER || request.getRole() == com.mediguardian.account.entity.Role.DOCTOR) {
             if (request.getProfile() == null) {
-                throw new BusinessException("Profile details are required for patient registration", ErrorCodes.VALIDATION_ERROR);
+                throw new BusinessException("Profile details are required for " + request.getRole().name() + " registration", ErrorCodes.VALIDATION_ERROR);
             }
             com.mediguardian.profile.dto.ProfileResponse profile = profileService.createProfileForAccount(request.getProfile(), account.getId());
             String familyName = (profile.getLastName() != null ? profile.getLastName() : profile.getFirstName()) + " Family";
