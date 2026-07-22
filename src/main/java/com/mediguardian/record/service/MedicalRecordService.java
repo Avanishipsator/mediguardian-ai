@@ -1,0 +1,116 @@
+package com.mediguardian.record.service;
+
+import com.mediguardian.core.common.ErrorCodes;
+import com.mediguardian.core.common.SecurityUtils;
+import com.mediguardian.core.exception.BusinessException;
+import com.mediguardian.family.entity.FamilyMember;
+import com.mediguardian.family.repository.FamilyMemberRepository;
+import com.mediguardian.profile.entity.Profile;
+import com.mediguardian.profile.repository.ProfileRepository;
+import com.mediguardian.record.dto.MedicalRecordResponse;
+import com.mediguardian.record.entity.MedicalRecord;
+import com.mediguardian.record.entity.RecordType;
+import com.mediguardian.record.repository.MedicalRecordRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.time.Instant;
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+@Service
+@RequiredArgsConstructor
+public class MedicalRecordService {
+
+    private final MedicalRecordRepository recordRepository;
+    private final ProfileRepository profileRepository;
+    private final FamilyMemberRepository familyMemberRepository;
+    private final StorageService storageService;
+
+    @Transactional
+    public MedicalRecordResponse uploadRecord(UUID profileId, MultipartFile file, String title, RecordType type, String description) {
+        Profile targetProfile = profileRepository.findById(profileId)
+                .orElseThrow(() -> new BusinessException("Profile not found", ErrorCodes.NOT_FOUND));
+
+        verifyPermission(targetProfile);
+
+        String originalFilename = file.getOriginalFilename();
+        String fileExtension = originalFilename != null && originalFilename.contains(".") 
+                ? originalFilename.substring(originalFilename.lastIndexOf(".")) : "";
+        String fileKey = "records/" + profileId.toString() + "/" + UUID.randomUUID().toString() + fileExtension;
+
+        String uploadedKey = storageService.uploadFile(file, fileKey);
+
+        MedicalRecord record = MedicalRecord.builder()
+                .profileId(profileId)
+                .title(title)
+                .type(type)
+                .description(description)
+                .s3FileKey(uploadedKey)
+                .uploadDate(Instant.now())
+                .build();
+        
+        record = recordRepository.save(record);
+
+        return mapToResponse(record);
+    }
+
+    public List<MedicalRecordResponse> getRecordsForProfile(UUID profileId) {
+        Profile targetProfile = profileRepository.findById(profileId)
+                .orElseThrow(() -> new BusinessException("Profile not found", ErrorCodes.NOT_FOUND));
+
+        verifyPermission(targetProfile);
+
+        return recordRepository.findByProfileIdOrderByUploadDateDesc(profileId).stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
+    private void verifyPermission(Profile targetProfile) {
+        UUID currentAccountId = SecurityUtils.getCurrentAccountId()
+                .orElseThrow(() -> new BusinessException("User not authenticated", ErrorCodes.UNAUTHORIZED));
+
+        if (currentAccountId.equals(targetProfile.getAccountId())) {
+            return; // User owns this profile
+        }
+
+        Profile currentProfile = profileRepository.findByAccountId(currentAccountId)
+                .orElseThrow(() -> new BusinessException("Your profile not found", ErrorCodes.VALIDATION_ERROR));
+
+        List<FamilyMember> targetMemberships = familyMemberRepository.findByProfileId(targetProfile.getId());
+        List<FamilyMember> currentMemberships = familyMemberRepository.findByProfileId(currentProfile.getId());
+
+        boolean hasPermission = false;
+        for (FamilyMember myMembership : currentMemberships) {
+            for (FamilyMember theirMembership : targetMemberships) {
+                if (myMembership.getFamilyId().equals(theirMembership.getFamilyId())) {
+                    if (theirMembership.isCanViewMedicalHistory()) {
+                        hasPermission = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (!hasPermission) {
+            throw new BusinessException("You do not have permission to access medical records for this profile", ErrorCodes.FORBIDDEN);
+        }
+    }
+
+    private MedicalRecordResponse mapToResponse(MedicalRecord record) {
+        String url = storageService.generatePresignedUrl(record.getS3FileKey());
+        
+        return MedicalRecordResponse.builder()
+                .id(record.getId())
+                .profileId(record.getProfileId())
+                .title(record.getTitle())
+                .type(record.getType())
+                .description(record.getDescription())
+                .uploadDate(record.getUploadDate())
+                .presignedUrl(url)
+                .build();
+    }
+}
