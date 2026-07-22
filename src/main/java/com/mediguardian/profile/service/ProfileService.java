@@ -160,6 +160,7 @@ public class ProfileService {
                 .accountId(profile.getAccountId())
                 .firstName(profile.getFirstName())
                 .lastName(profile.getLastName())
+                .profilePhotoUrl(profile.getProfilePhotoUrl())
                 .dateOfBirth(profile.getDateOfBirth())
                 .gender(profile.getGender() != null ? profile.getGender().name() : null)
                 .bloodGroup(profile.getBloodGroup() != null ? profile.getBloodGroup().name() : null)
@@ -198,5 +199,13 @@ public class ProfileService {
         
         profile = profileRepository.save(profile);
         return mapToResponse(profile);
+    }
+
+    public ProfileResponse uploadMyProfilePhoto(org.springframework.web.multipart.MultipartFile file) {
+        UUID accountId = SecurityUtils.getCurrentAccountId()
+                .orElseThrow(() -> new BusinessException("User not authenticated", ErrorCodes.UNAUTHORIZED));
+        Profile myProfile = profileRepository.findByAccountId(accountId)
+                .orElseThrow(() -> new BusinessException("Profile not found for current account", ErrorCodes.NOT_FOUND));
+        return uploadProfilePhoto(myProfile.getId(), file);
     }
 }

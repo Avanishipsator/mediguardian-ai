@@ -7,8 +7,8 @@ import java.util.UUID;
 
 @Data
 public class AddFamilyMemberRequest {
-    @NotNull(message = "Profile ID is required")
-    private UUID profileId;
+    @NotNull(message = "Emergency ID is required")
+    private UUID emergencyId;
 
     @NotNull(message = "Relationship is required")
     private Relationship relationshipToHead;

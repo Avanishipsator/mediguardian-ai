@@ -43,6 +43,7 @@ public class HospitalService {
                 .profileId(profile.getId())
                 .firstName(profile.getFirstName())
                 .lastName(profile.getLastName())
+                .profilePhotoUrl(profile.getProfilePhotoUrl())
                 .dateOfBirth(profile.getDateOfBirth())
                 .gender(profile.getGender())
                 .mobileNumber(account.getMobileNumber())

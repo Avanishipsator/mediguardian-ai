@@ -74,13 +74,16 @@ public class FamilyService {
             throw new BusinessException("Only the Head of the Family can add members", ErrorCodes.FORBIDDEN);
         }
 
-        if (familyMemberRepository.findByFamilyIdAndProfileId(familyId, request.getProfileId()).isPresent()) {
+        Profile targetProfile = profileRepository.findByEmergencyId(request.getEmergencyId())
+                .orElseThrow(() -> new BusinessException("No profile found with the provided Emergency ID", ErrorCodes.NOT_FOUND));
+
+        if (familyMemberRepository.findByFamilyIdAndProfileId(familyId, targetProfile.getId()).isPresent()) {
             throw new BusinessException("Profile is already in this family", ErrorCodes.VALIDATION_ERROR);
         }
 
         FamilyMember member = FamilyMember.builder()
                 .familyId(familyId)
-                .profileId(request.getProfileId())
+                .profileId(targetProfile.getId())
                 .relationshipToHead(request.getRelationshipToHead())
                 .canViewMedicalHistory(request.isCanViewMedicalHistory())
                 .build();
@@ -150,6 +153,26 @@ public class FamilyService {
         familyMemberRepository.save(member);
 
         return mapToResponse(family);
+    }
+
+    @Transactional
+    public void rejectFamilyMember(UUID familyId, UUID memberProfileId) {
+        UUID accountId = SecurityUtils.getCurrentAccountId()
+                .orElseThrow(() -> new BusinessException("User not authenticated", ErrorCodes.UNAUTHORIZED));
+        Profile headProfile = profileRepository.findByAccountId(accountId)
+                .orElseThrow(() -> new BusinessException("Primary profile not found.", ErrorCodes.NOT_FOUND));
+
+        Family family = familyRepository.findById(familyId)
+                .orElseThrow(() -> new BusinessException("Family not found", ErrorCodes.NOT_FOUND));
+
+        if (!family.getHeadProfileId().equals(headProfile.getId())) {
+            throw new BusinessException("Only the Head of the Family can reject members", ErrorCodes.FORBIDDEN);
+        }
+
+        FamilyMember member = familyMemberRepository.findByFamilyIdAndProfileId(familyId, memberProfileId)
+                .orElseThrow(() -> new BusinessException("Member not found in family", ErrorCodes.NOT_FOUND));
+
+        familyMemberRepository.delete(member);
     }
 
     private FamilyResponse mapToResponse(Family family) {

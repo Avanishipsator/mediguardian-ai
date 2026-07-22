@@ -64,4 +64,14 @@ public class FamilyController {
     ) {
         return ResponseEntity.ok(ApiResponse.success(familyService.approveFamilyMember(familyId, profileId), "Member approved successfully"));
     }
+
+    @PostMapping("/{familyId}/members/{profileId}/reject")
+    @Operation(summary = "Reject a pending family member (Only for Family Head)")
+    public ResponseEntity<ApiResponse<Void>> rejectFamilyMember(
+            @PathVariable UUID familyId,
+            @PathVariable UUID profileId
+    ) {
+        familyService.rejectFamilyMember(familyId, profileId);
+        return ResponseEntity.ok(ApiResponse.success(null, "Member rejected successfully"));
+    }
 }
