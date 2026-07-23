@@ -63,6 +63,11 @@ public class AiService {
         Profile profile = profileRepository.findByEmergencyId(emergencyId)
                 .orElseThrow(() -> new BusinessException("Emergency Profile not found", ErrorCodes.NOT_FOUND));
 
+        List<MedicalRecord> records = medicalRecordRepository.findByProfileIdOrderByUploadDateDesc(profile.getId());
+        String recordsSummary = records.isEmpty() ? "None" : records.stream()
+                .map(r -> String.format("- %s (Date: %s): %s", r.getTitle(), r.getUploadDate(), r.getDescription()))
+                .collect(Collectors.joining("\n"));
+
         String patientContext = String.format("""
                 Patient Name: %s %s
                 Age/DOB: %s
@@ -70,10 +75,14 @@ public class AiService {
                 Blood Group: %s
                 Allergies: %s
                 Conditions: %s
+                
+                Recent Medical History & Reports:
+                %s
                 """, profile.getFirstName(), profile.getLastName(), profile.getDateOfBirth(), 
                 profile.getGender(), profile.getBloodGroup(), 
                 String.join(", ", profile.getAllergies() != null ? profile.getAllergies() : java.util.Collections.emptyList()), 
-                String.join(", ", profile.getConditions() != null ? profile.getConditions() : java.util.Collections.emptyList()));
+                String.join(", ", profile.getConditions() != null ? profile.getConditions() : java.util.Collections.emptyList()),
+                recordsSummary);
 
         String promptText = """
                 You are a critical care emergency AI assistant assisting a doctor.
@@ -82,7 +91,8 @@ public class AiService {
                 
                 The doctor asks: {doctorQuestion}
                 
-                Provide a concise, medical-grade answer based strictly on the patient's profile. 
+                Provide a concise, medical-grade answer based strictly on the patient's profile and medical history.
+                Pay careful attention to the dates of the medical reports to determine the most recent or current issues (e.g. a 2026 report is a more recent problem than a 2024 report).
                 If the profile doesn't contain enough information to answer, state that clearly.
                 """;
 
