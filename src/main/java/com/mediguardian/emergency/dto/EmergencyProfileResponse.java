@@ -37,6 +37,10 @@ public class EmergencyProfileResponse {
     private List<String> medicalDevices;
     private List<String> vaccinations;
     private List<String> familyHistory;
+    
+    private String aiTriageSummary;
 
     private UUID emergencyId;
+    
+    private com.mediguardian.profile.dto.InsuranceDetailsDto insuranceDetails;
 }

@@ -69,6 +69,19 @@ public class MedicalRecordService {
             notificationService.createNotification(targetProfile.getAccountId(), hospitalName + " uploaded a new " + type.name() + " report.");
         }
 
+        // Trigger AI Extraction
+        try {
+            // In a real application, we would run OCR on the file or extract text from a PDF.
+            // For the hackathon/demo, we'll extract text if it's a txt file, or use the description as a fallback prompt.
+            String fileContent = new String(file.getBytes(), java.nio.charset.StandardCharsets.UTF_8);
+            String textToAnalyze = fileContent.trim().isEmpty() ? description : fileContent;
+            
+            com.mediguardian.core.common.SpringContext.getBean(com.mediguardian.ai.service.AiExtractionService.class)
+                    .extractDataPointsAsync(targetProfile, record, textToAnalyze);
+        } catch (Exception e) {
+            // Ignore error so upload succeeds
+        }
+
         return mapToResponse(record);
     }
 
