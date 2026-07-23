@@ -32,19 +32,25 @@ public class ProfileService {
     private final QrCodeGenerator qrCodeGenerator;
     private final StorageService storageService;
     private final com.mediguardian.profile.service.BiometricService biometricService;
+    private final com.mediguardian.family.repository.FamilyRepository familyRepository;
+    private final com.mediguardian.family.repository.FamilyMemberRepository familyMemberRepository;
 
     public ProfileService(ProfileRepository profileRepository, 
                           @org.springframework.context.annotation.Lazy AuthService authService, 
                           AccountRepository accountRepository, 
                           QrCodeGenerator qrCodeGenerator, 
                           StorageService storageService,
-                          @org.springframework.context.annotation.Lazy com.mediguardian.profile.service.BiometricService biometricService) {
+                          @org.springframework.context.annotation.Lazy com.mediguardian.profile.service.BiometricService biometricService,
+                          com.mediguardian.family.repository.FamilyRepository familyRepository,
+                          com.mediguardian.family.repository.FamilyMemberRepository familyMemberRepository) {
         this.profileRepository = profileRepository;
         this.authService = authService;
         this.accountRepository = accountRepository;
         this.qrCodeGenerator = qrCodeGenerator;
         this.storageService = storageService;
         this.biometricService = biometricService;
+        this.familyRepository = familyRepository;
+        this.familyMemberRepository = familyMemberRepository;
     }
 
     @Value("${server.url:http://localhost:8081}")
@@ -57,7 +63,29 @@ public class ProfileService {
             accountId = SecurityUtils.getCurrentAccountId()
                     .orElseThrow(() -> new BusinessException("User not authenticated", ErrorCodes.UNAUTHORIZED));
         }
-        return createProfileForAccount(request, accountId);
+        ProfileResponse response = createProfileForAccount(request, accountId);
+
+        if (!isSelf) {
+            UUID currentAccountId = SecurityUtils.getCurrentAccountId().orElse(null);
+            if (currentAccountId != null) {
+                profileRepository.findByAccountId(currentAccountId).ifPresent(headProfile -> {
+                    java.util.List<com.mediguardian.family.entity.Family> families = familyRepository.findByHeadProfileId(headProfile.getId());
+                    if (!families.isEmpty()) {
+                        com.mediguardian.family.entity.Family family = families.get(0);
+                        com.mediguardian.family.entity.FamilyMember member = com.mediguardian.family.entity.FamilyMember.builder()
+                                .familyId(family.getId())
+                                .profileId(response.getId())
+                                .relationshipToHead(com.mediguardian.family.entity.Relationship.OTHER)
+                                .canViewMedicalHistory(false)
+                                .status(com.mediguardian.family.entity.FamilyMemberStatus.APPROVED)
+                                .build();
+                        familyMemberRepository.save(member);
+                    }
+                });
+            }
+        }
+
+        return response;
     }
 
     @Transactional
