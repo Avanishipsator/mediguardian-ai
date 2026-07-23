@@ -29,6 +29,7 @@ public class MedicalRecordService {
     private final MedicalRecordRepository recordRepository;
     private final ProfileRepository profileRepository;
     private final FamilyMemberRepository familyMemberRepository;
+    private final com.mediguardian.family.repository.FamilyRepository familyRepository;
     private final StorageService storageService;
     private final NotificationService notificationService;
 
@@ -119,12 +120,22 @@ public class MedicalRecordService {
         List<FamilyMember> currentMemberships = familyMemberRepository.findByProfileId(currentProfile.getId());
 
         boolean hasPermission = false;
+        
+        java.util.List<com.mediguardian.family.entity.Family> familiesWhereCurrentIsHead = familyRepository.findByHeadProfileId(currentProfile.getId());
+        
         for (FamilyMember myMembership : currentMemberships) {
             for (FamilyMember theirMembership : targetMemberships) {
                 if (myMembership.getFamilyId().equals(theirMembership.getFamilyId())) {
                     if (theirMembership.isCanViewMedicalHistory()) {
                         hasPermission = true;
                         break;
+                    }
+                    // Current profile is head of this family
+                    for (com.mediguardian.family.entity.Family family : familiesWhereCurrentIsHead) {
+                        if (family.getId().equals(theirMembership.getFamilyId())) {
+                            hasPermission = true;
+                            break;
+                        }
                     }
                 }
             }

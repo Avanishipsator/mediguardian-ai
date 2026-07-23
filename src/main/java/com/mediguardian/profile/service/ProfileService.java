@@ -224,9 +224,22 @@ public class ProfileService {
             UUID accountId = SecurityUtils.getCurrentAccountId()
                     .orElseThrow(() -> new BusinessException("User not authenticated", ErrorCodes.UNAUTHORIZED));
             if (profile.getAccountId() == null || !profile.getAccountId().equals(accountId)) {
-                // Check if they are part of the same family and have edit permissions (simplification: only owner or admin can edit for now)
-                // In a full implementation, you'd check FamilyMember permissions for EDIT here.
-                throw new BusinessException("You do not have permission to edit this profile", ErrorCodes.FORBIDDEN);
+                // If the current user is not the owner, check if they are the head of the family this profile belongs to
+                boolean isHeadOfFamily = false;
+                java.util.Optional<Profile> currentProfileOpt = profileRepository.findByAccountId(accountId);
+                if (currentProfileOpt.isPresent()) {
+                    java.util.List<com.mediguardian.family.entity.Family> families = familyRepository.findByHeadProfileId(currentProfileOpt.get().getId());
+                    for (com.mediguardian.family.entity.Family family : families) {
+                        if (familyMemberRepository.findByFamilyIdAndProfileId(family.getId(), profile.getId()).isPresent()) {
+                            isHeadOfFamily = true;
+                            break;
+                        }
+                    }
+                }
+                
+                if (!isHeadOfFamily) {
+                    throw new BusinessException("You do not have permission to edit this profile", ErrorCodes.FORBIDDEN);
+                }
             }
         }
 
