@@ -55,7 +55,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 // In our JWT, subject is the Account UUID
                 UserDetails userDetails = this.userDetailsService.loadUserById(java.util.UUID.fromString(userIdentifier));
 
-                if (jwtService.isTokenValid(jwt, userDetails)) {
+                if (userDetails.isAccountNonLocked() && jwtService.isTokenValid(jwt, userDetails)) {
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                             userDetails,
                             null,

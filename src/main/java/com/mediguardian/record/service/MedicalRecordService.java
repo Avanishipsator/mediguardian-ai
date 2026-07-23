@@ -107,7 +107,7 @@ public class MedicalRecordService {
             return; // User owns this profile
         }
 
-        boolean hasHospitalRole = SecurityUtils.hasRole("HOSPITAL") || SecurityUtils.hasRole("DOCTOR");
+        boolean hasHospitalRole = SecurityUtils.hasRole("HOSPITAL") || SecurityUtils.hasRole("DOCTOR") || SecurityUtils.hasRole("LAB");
         if (hasHospitalRole) {
             return;
         }

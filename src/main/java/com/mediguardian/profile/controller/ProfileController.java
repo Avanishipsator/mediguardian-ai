@@ -52,6 +52,15 @@ public class ProfileController {
         return ResponseEntity.ok(ApiResponse.success(profileService.getProfileById(id), "Profile retrieved successfully"));
     }
 
+    @PatchMapping("/{id}")
+    @Operation(summary = "Update an existing profile (Owner or Admin only)")
+    public ResponseEntity<ApiResponse<ProfileResponse>> updateProfile(
+            @PathVariable UUID id,
+            @RequestBody ProfileRequest request
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(profileService.updateProfile(id, request), "Profile updated successfully"));
+    }
+
     @PostMapping("/{id}/claim")
     @Operation(summary = "Claim a dependent profile by creating credentials for it")
     public ResponseEntity<ApiResponse<Void>> claimProfile(

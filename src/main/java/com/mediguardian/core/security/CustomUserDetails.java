@@ -40,7 +40,7 @@ public class CustomUserDetails implements UserDetails {
 
     @Override
     public boolean isAccountNonLocked() {
-        return !account.isDeleted(); // Soft deleted accounts are locked
+        return !account.isDeleted() && !account.isFrozen(); // Soft deleted or frozen accounts are locked
     }
 
     @Override

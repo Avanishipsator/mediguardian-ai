@@ -188,6 +188,45 @@ public class ProfileService {
     }
 
     @Transactional
+    public ProfileResponse updateProfile(UUID id, ProfileRequest request) {
+        Profile profile = profileRepository.findById(id)
+                .orElseThrow(() -> new BusinessException("Profile not found", ErrorCodes.NOT_FOUND));
+
+        if (!SecurityUtils.hasRole("ADMIN")) {
+            UUID accountId = SecurityUtils.getCurrentAccountId()
+                    .orElseThrow(() -> new BusinessException("User not authenticated", ErrorCodes.UNAUTHORIZED));
+            if (profile.getAccountId() == null || !profile.getAccountId().equals(accountId)) {
+                // Check if they are part of the same family and have edit permissions (simplification: only owner or admin can edit for now)
+                // In a full implementation, you'd check FamilyMember permissions for EDIT here.
+                throw new BusinessException("You do not have permission to edit this profile", ErrorCodes.FORBIDDEN);
+            }
+        }
+
+        if (request.getFirstName() != null) profile.setFirstName(request.getFirstName());
+        if (request.getLastName() != null) profile.setLastName(request.getLastName());
+        if (request.getDateOfBirth() != null) profile.setDateOfBirth(request.getDateOfBirth());
+        if (request.getGender() != null) profile.setGender(Gender.valueOf(request.getGender()));
+        if (request.getBloodGroup() != null) profile.setBloodGroup(BloodGroup.valueOf(request.getBloodGroup()));
+        if (request.getHeight() != null) profile.setHeight(request.getHeight());
+        if (request.getWeight() != null) profile.setWeight(request.getWeight());
+        if (request.getMobile() != null) profile.setMobile(request.getMobile());
+        if (request.getEmergencyContacts() != null) profile.setEmergencyContacts(request.getEmergencyContacts());
+        if (request.getPrimaryDoctor() != null) profile.setPrimaryDoctor(request.getPrimaryDoctor());
+        if (request.getLifestyle() != null) profile.setLifestyle(request.getLifestyle());
+        if (request.getAllergies() != null) profile.setAllergies(request.getAllergies());
+        if (request.getConditions() != null) profile.setConditions(request.getConditions());
+        if (request.getMedications() != null) profile.setMedications(request.getMedications());
+        if (request.getSurgeries() != null) profile.setSurgeries(request.getSurgeries());
+        if (request.getImplants() != null) profile.setImplants(request.getImplants());
+        if (request.getMedicalDevices() != null) profile.setMedicalDevices(request.getMedicalDevices());
+        if (request.getVaccinations() != null) profile.setVaccinations(request.getVaccinations());
+        if (request.getFamilyHistory() != null) profile.setFamilyHistory(request.getFamilyHistory());
+
+        profile = profileRepository.save(profile);
+        return mapToResponse(profile);
+    }
+
+    @Transactional
     public ProfileResponse uploadProfilePhoto(UUID profileId, org.springframework.web.multipart.MultipartFile file) {
         Profile profile = profileRepository.findById(profileId)
                 .orElseThrow(() -> new BusinessException("Profile not found", ErrorCodes.NOT_FOUND));

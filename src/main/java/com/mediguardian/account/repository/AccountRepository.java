@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
 import java.util.UUID;
+import java.util.List;
 
 public interface AccountRepository extends JpaRepository<Account, UUID> {
     
@@ -16,4 +17,8 @@ public interface AccountRepository extends JpaRepository<Account, UUID> {
     boolean existsByEmail(String email);
     
     boolean existsByMobileNumber(String mobileNumber);
+
+    Optional<Account> findByMobileNumber(String mobileNumber);
+
+    List<Account> findByRole(com.mediguardian.account.entity.Role role);
 }
