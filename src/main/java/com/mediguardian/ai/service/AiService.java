@@ -130,4 +130,46 @@ public class AiService {
             throw new BusinessException("AI Assistant is currently unavailable. Please verify API keys and configuration on the server.", ErrorCodes.INTERNAL_SERVER_ERROR);
         }
     }
+
+    public String generateTriageSummary(Profile profile) {
+        List<MedicalRecord> records = medicalRecordRepository.findByProfileIdOrderByUploadDateDesc(profile.getId());
+        String recordsSummary = records.isEmpty() ? "None" : records.stream()
+                .map(r -> String.format("- %s (Date: %s): %s", r.getTitle(), r.getUploadDate(), r.getDescription()))
+                .collect(Collectors.joining("\n"));
+
+        String patientContext = String.format("""
+                Patient Name: %s %s
+                Age/DOB: %s
+                Gender: %s
+                Blood Group: %s
+                Allergies: %s
+                Conditions: %s
+                
+                Recent Medical History & Reports:
+                %s
+                """, profile.getFirstName(), profile.getLastName(), profile.getDateOfBirth(), 
+                profile.getGender(), profile.getBloodGroup(), 
+                String.join(", ", profile.getAllergies() != null ? profile.getAllergies() : java.util.Collections.emptyList()), 
+                String.join(", ", profile.getConditions() != null ? profile.getConditions() : java.util.Collections.emptyList()),
+                recordsSummary);
+
+        String promptText = """
+                You are a critical care emergency AI assistant assisting a doctor.
+                The following is the emergency profile of an unconscious patient:
+                {patientContext}
+                
+                Generate a concise, 3-4 sentence triage summary of the patient's critical health information that an ER doctor must know immediately. Focus heavily on allergies, chronic conditions, and recent severe medical events. Do NOT provide a full diagnosis, just a rapid situational summary.
+                """;
+
+        PromptTemplate template = new PromptTemplate(promptText);
+        Prompt prompt = template.create(Map.of("patientContext", patientContext));
+
+        try {
+            return chatClient.prompt(prompt).call().content();
+        } catch (Exception e) {
+            System.err.println("AI Service Error in generateTriageSummary: " + e.getMessage());
+            e.printStackTrace();
+            throw new BusinessException("AI Assistant is currently unavailable.", ErrorCodes.INTERNAL_SERVER_ERROR);
+        }
+    }
 }
