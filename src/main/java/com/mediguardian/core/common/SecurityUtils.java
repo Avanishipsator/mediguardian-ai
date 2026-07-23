@@ -33,6 +33,6 @@ public final class SecurityUtils {
             return false;
         }
         return authentication.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals(role));
+                .anyMatch(a -> a.getAuthority().equals(role) || a.getAuthority().equals("ROLE_" + role));
     }
 }
