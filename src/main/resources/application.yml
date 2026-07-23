@@ -22,7 +22,13 @@ spring:
           project-id: ${GEMINI_PROJECT_ID:mock-project-id}
           location: ${GEMINI_LOCATION:us-central1}
 
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 12MB
+
 server:
+  url: ${SERVER_URL:https://mediguardian-ai-kdeo.onrender.com}
   port: ${PORT:8081}
   error:
     include-message: always
@@ -47,3 +53,7 @@ aws:
   region: ${AWS_REGION:ap-south-1}
   s3:
     bucket: ${AWS_S3_BUCKET:lakshdweep-stage-files}
+
+cdn:
+  base:
+    url: ${CDN_BASE_URL:https://laksh-uat-cdn.ipsator.com}

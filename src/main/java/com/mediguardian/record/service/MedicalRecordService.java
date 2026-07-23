@@ -41,7 +41,11 @@ public class MedicalRecordService {
 
         String originalFilename = file.getOriginalFilename();
         String fileExtension = originalFilename != null && originalFilename.contains(".") 
-                ? originalFilename.substring(originalFilename.lastIndexOf(".")) : "";
+                ? originalFilename.substring(originalFilename.lastIndexOf(".")).toLowerCase() : "";
+
+        if (!fileExtension.equals(".pdf") && !fileExtension.equals(".jpg") && !fileExtension.equals(".jpeg") && !fileExtension.equals(".png")) {
+            throw new BusinessException("Unsupported file type. Supported types are pdf, jpg, jpeg, png.", ErrorCodes.VALIDATION_ERROR);
+        }
         String fileKey = "records/" + profileId.toString() + "/" + UUID.randomUUID().toString() + fileExtension;
 
         String uploadedKey = storageService.uploadFile(file, fileKey);
@@ -132,7 +136,7 @@ public class MedicalRecordService {
     }
 
     private MedicalRecordResponse mapToResponse(MedicalRecord record) {
-        String url = storageService.generatePresignedUrl(record.getS3FileKey());
+        String url = storageService.getCdnUrl(record.getS3FileKey());
         
         return MedicalRecordResponse.builder()
                 .id(record.getId())

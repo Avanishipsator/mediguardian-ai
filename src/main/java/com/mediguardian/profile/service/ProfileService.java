@@ -147,12 +147,12 @@ public class ProfileService {
     private ProfileResponse mapToResponse(Profile profile) {
         String qrCodeUrl = null;
         if (profile.getQrCodeUrl() != null) {
-            qrCodeUrl = storageService.generatePresignedUrl(profile.getQrCodeUrl());
+            qrCodeUrl = storageService.getCdnUrl(profile.getQrCodeUrl());
         }
         
         String profilePhotoUrl = null;
         if (profile.getProfilePhotoUrl() != null) {
-            profilePhotoUrl = storageService.generatePresignedUrl(profile.getProfilePhotoUrl());
+            profilePhotoUrl = storageService.getCdnUrl(profile.getProfilePhotoUrl());
         }
         
         return ProfileResponse.builder()
@@ -191,7 +191,11 @@ public class ProfileService {
 
         String originalFilename = file.getOriginalFilename();
         String fileExtension = originalFilename != null && originalFilename.contains(".") 
-                ? originalFilename.substring(originalFilename.lastIndexOf(".")) : "";
+                ? originalFilename.substring(originalFilename.lastIndexOf(".")).toLowerCase() : "";
+        
+        if (!fileExtension.equals(".pdf") && !fileExtension.equals(".jpg") && !fileExtension.equals(".jpeg") && !fileExtension.equals(".png")) {
+            throw new BusinessException("Unsupported file type. Supported types are pdf, jpg, jpeg, png.", ErrorCodes.VALIDATION_ERROR);
+        }
         String fileKey = "profiles/" + profileId.toString() + "/photo" + fileExtension;
 
         String uploadedKey = storageService.uploadFile(file, fileKey);

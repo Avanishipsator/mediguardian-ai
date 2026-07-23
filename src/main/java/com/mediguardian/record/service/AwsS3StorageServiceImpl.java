@@ -27,6 +27,9 @@ public class AwsS3StorageServiceImpl implements StorageService {
     @Value("${aws.s3.bucket}")
     private String bucketName;
 
+    @Value("${cdn.base.url}")
+    private String cdnBaseUrl;
+
     @Override
     public String uploadFile(MultipartFile file, String fileKey) {
         try {
@@ -80,5 +83,13 @@ public class AwsS3StorageServiceImpl implements StorageService {
         } catch (S3Exception e) {
             throw new BusinessException("Failed to generate pre-signed URL: " + e.getMessage(), ErrorCodes.INTERNAL_SERVER_ERROR);
         }
+    }
+
+    @Override
+    public String getCdnUrl(String fileKey) {
+        if (fileKey == null || fileKey.isEmpty()) {
+            return null;
+        }
+        return String.format("%s/%s", cdnBaseUrl, fileKey);
     }
 }
