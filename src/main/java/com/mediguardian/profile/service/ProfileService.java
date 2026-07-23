@@ -144,7 +144,7 @@ public class ProfileService {
                 .build();
 
         // Generate QR Code containing the emergency URL
-        String emergencyUrl = serverUrl + "/api/v1/emergency/" + emergencyId;
+        String emergencyUrl = "https://pal-web-app-omega.vercel.app/lookup?emergencyId=" + emergencyId;
         byte[] qrCodeBytes = qrCodeGenerator.generateQrCode(emergencyUrl, 250, 250);
         
         // Upload QR Code to S3
