@@ -26,7 +26,7 @@ public class Account extends BaseEntity {
     @Column(nullable = false)
     private Role role;
 
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "boolean default false")
     @Builder.Default
     private boolean isFrozen = false;
 }
