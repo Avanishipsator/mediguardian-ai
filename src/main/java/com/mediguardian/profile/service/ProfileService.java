@@ -238,7 +238,7 @@ public class ProfileService {
         if (!fileExtension.equals(".pdf") && !fileExtension.equals(".jpg") && !fileExtension.equals(".jpeg") && !fileExtension.equals(".png")) {
             throw new BusinessException("Unsupported file type. Supported types are pdf, jpg, jpeg, png.", ErrorCodes.VALIDATION_ERROR);
         }
-        String fileKey = "profiles/" + profileId.toString() + "/photo" + fileExtension;
+        String fileKey = "profiles/" + profileId.toString() + "/photo_" + System.currentTimeMillis() + fileExtension;
 
         String uploadedKey = storageService.uploadFile(file, fileKey);
         profile.setProfilePhotoUrl(uploadedKey);
