@@ -62,6 +62,27 @@ public class ProfileService {
         if (isSelf) {
             accountId = SecurityUtils.getCurrentAccountId()
                     .orElseThrow(() -> new BusinessException("User not authenticated", ErrorCodes.UNAUTHORIZED));
+        } else {
+            UUID currentAccountId = SecurityUtils.getCurrentAccountId().orElse(null);
+            if (currentAccountId != null) {
+                profileRepository.findByAccountId(currentAccountId).ifPresent(headProfile -> {
+                    if (headProfile.getMobile() != null && !headProfile.getMobile().isEmpty()) {
+                        java.util.List<com.mediguardian.profile.entity.EmergencyContact> contacts = new java.util.ArrayList<>();
+                        if (request.getEmergencyContacts() != null) {
+                            contacts.addAll(request.getEmergencyContacts());
+                        }
+                        boolean hasHead = contacts.stream().anyMatch(c -> headProfile.getMobile().equals(c.getContactPhone()));
+                        if (!hasHead) {
+                            contacts.add(com.mediguardian.profile.entity.EmergencyContact.builder()
+                                    .contactName(headProfile.getFirstName() + " " + headProfile.getLastName())
+                                    .contactPhone(headProfile.getMobile())
+                                    .contactRelationship("Guardian")
+                                    .build());
+                            request.setEmergencyContacts(contacts);
+                        }
+                    }
+                });
+            }
         }
         ProfileResponse response = createProfileForAccount(request, accountId);
 
