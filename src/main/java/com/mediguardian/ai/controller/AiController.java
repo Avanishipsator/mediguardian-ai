@@ -14,6 +14,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.UUID;
 
+import org.springframework.security.access.prepost.PreAuthorize;
+
 @RestController
 @RequestMapping("/api/v1/ai")
 @RequiredArgsConstructor
@@ -25,6 +27,7 @@ public class AiController {
 
     @Operation(summary = "Analyze patient progress based on a specific condition")
     @GetMapping("/analyze/{profileId}")
+    @PreAuthorize("hasRole('DOCTOR')")
     public ResponseEntity<String> analyzeProgress(@PathVariable UUID profileId, @RequestParam String condition) {
         return ResponseEntity.ok(aiService.analyzeProgress(profileId, condition));
     }
