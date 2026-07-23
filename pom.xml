@@ -59,6 +59,13 @@
             <artifactId>spring-ai-vertex-ai-gemini-spring-boot-starter</artifactId>
         </dependency>
 
+        <!-- SourceAFIS for Biometric Search -->
+        <dependency>
+            <groupId>com.machinezoo.sourceafis</groupId>
+            <artifactId>sourceafis</artifactId>
+            <version>3.17.1</version>
+        </dependency>
+
         <!-- ZXing for QR Code Generation -->
         <dependency>
             <groupId>com.google.zxing</groupId>

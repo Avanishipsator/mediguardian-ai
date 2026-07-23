@@ -31,17 +31,20 @@ public class ProfileService {
     private final AccountRepository accountRepository;
     private final QrCodeGenerator qrCodeGenerator;
     private final StorageService storageService;
-    
+    private final com.mediguardian.profile.service.BiometricService biometricService;
+
     public ProfileService(ProfileRepository profileRepository, 
                           @org.springframework.context.annotation.Lazy AuthService authService, 
                           AccountRepository accountRepository, 
                           QrCodeGenerator qrCodeGenerator, 
-                          StorageService storageService) {
+                          StorageService storageService,
+                          @org.springframework.context.annotation.Lazy com.mediguardian.profile.service.BiometricService biometricService) {
         this.profileRepository = profileRepository;
         this.authService = authService;
         this.accountRepository = accountRepository;
         this.qrCodeGenerator = qrCodeGenerator;
         this.storageService = storageService;
+        this.biometricService = biometricService;
     }
 
     @Value("${server.url:http://localhost:8081}")
@@ -211,5 +214,17 @@ public class ProfileService {
         Profile myProfile = profileRepository.findByAccountId(accountId)
                 .orElseThrow(() -> new BusinessException("Profile not found for current account", ErrorCodes.NOT_FOUND));
         return uploadProfilePhoto(myProfile.getId(), file);
+    }
+
+    public void uploadMyFingerprint(org.springframework.web.multipart.MultipartFile file) {
+        UUID accountId = SecurityUtils.getCurrentAccountId()
+                .orElseThrow(() -> new BusinessException("User not authenticated", ErrorCodes.UNAUTHORIZED));
+
+        Profile profile = profileRepository.findByAccountId(accountId)
+                .orElseThrow(() -> new BusinessException("Profile not found", ErrorCodes.NOT_FOUND));
+
+        byte[] template = biometricService.createTemplate(file);
+        profile.setFingerprintTemplate(template);
+        profileRepository.save(profile);
     }
 }

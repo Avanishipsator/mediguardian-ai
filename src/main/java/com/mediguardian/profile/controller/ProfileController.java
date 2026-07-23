@@ -80,4 +80,13 @@ public class ProfileController {
         ProfileResponse response = profileService.uploadProfilePhoto(id, file);
         return ResponseEntity.ok(ApiResponse.success(response, "Profile photo uploaded successfully"));
     }
+
+    @PostMapping(value = "/me/fingerprint", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Upload a fingerprint image for biometric emergency search")
+    public ResponseEntity<ApiResponse<Void>> uploadMyFingerprint(
+            @RequestParam("file") org.springframework.web.multipart.MultipartFile file
+    ) {
+        profileService.uploadMyFingerprint(file);
+        return ResponseEntity.ok(ApiResponse.success(null, "Fingerprint registered successfully"));
+    }
 }
