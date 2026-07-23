@@ -24,11 +24,15 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Service
-@RequiredArgsConstructor
 public class AiExtractionService {
 
     private final ChatClient chatClient;
     private final MedicalDataPointRepository dataPointRepository;
+    
+    public AiExtractionService(ChatClient.Builder builder, MedicalDataPointRepository dataPointRepository) {
+        this.chatClient = builder.build();
+        this.dataPointRepository = dataPointRepository;
+    }
     
     @org.springframework.beans.factory.annotation.Value("${spring.ai.openai.api-key:null}")
     private String configuredApiKey;
