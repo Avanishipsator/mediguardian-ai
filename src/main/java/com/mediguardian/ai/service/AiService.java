@@ -24,6 +24,17 @@ public class AiService {
     private final ProfileRepository profileRepository;
     private final MedicalRecordRepository medicalRecordRepository;
 
+    public String testConnection() {
+        try {
+            return chatClient.prompt()
+                    .user("Hello, are you connected? Respond with 'Yes, I am connected.'")
+                    .call()
+                    .content();
+        } catch (Exception e) {
+            throw new BusinessException("Failed to connect to AI: " + e.getMessage(), ErrorCodes.INTERNAL_SERVER_ERROR);
+        }
+    }
+
     public AiService(ChatClient.Builder builder, ProfileRepository profileRepository, MedicalRecordRepository medicalRecordRepository) {
         this.chatClient = builder.build();
         this.profileRepository = profileRepository;

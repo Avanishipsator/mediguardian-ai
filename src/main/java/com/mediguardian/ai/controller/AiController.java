@@ -25,6 +25,13 @@ public class AiController {
 
     private final AiService aiService;
 
+    @Operation(summary = "Test AI connection")
+    @GetMapping("/test")
+    public ResponseEntity<com.mediguardian.core.common.ApiResponse<String>> testAiConnection() {
+        String response = aiService.testConnection();
+        return ResponseEntity.ok(com.mediguardian.core.common.ApiResponse.success(response, "Test successful"));
+    }
+
     @Operation(summary = "Analyze patient progress based on a specific condition")
     @GetMapping("/analyze/{profileId}")
     @PreAuthorize("hasAnyRole('USER', 'DOCTOR')")
