@@ -27,7 +27,7 @@ public class AiController {
 
     @Operation(summary = "Analyze patient progress based on a specific condition")
     @GetMapping("/analyze/{profileId}")
-    @PreAuthorize("hasRole('DOCTOR')")
+    @PreAuthorize("hasAnyRole('USER', 'DOCTOR')")
     public ResponseEntity<String> analyzeProgress(@PathVariable UUID profileId, @RequestParam String condition) {
         return ResponseEntity.ok(aiService.analyzeProgress(profileId, condition));
     }
