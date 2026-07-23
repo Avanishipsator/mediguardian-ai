@@ -72,8 +72,8 @@ public class AiService {
                 Conditions: %s
                 """, profile.getFirstName(), profile.getLastName(), profile.getDateOfBirth(), 
                 profile.getGender(), profile.getBloodGroup(), 
-                String.join(", ", profile.getAllergies()), 
-                String.join(", ", profile.getConditions()));
+                String.join(", ", profile.getAllergies() != null ? profile.getAllergies() : java.util.Collections.emptyList()), 
+                String.join(", ", profile.getConditions() != null ? profile.getConditions() : java.util.Collections.emptyList()));
 
         String promptText = """
                 You are a critical care emergency AI assistant assisting a doctor.
