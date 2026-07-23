@@ -11,6 +11,7 @@ import com.mediguardian.family.entity.FamilyMember;
 import com.mediguardian.family.entity.Relationship;
 import com.mediguardian.family.repository.FamilyMemberRepository;
 import com.mediguardian.family.repository.FamilyRepository;
+import com.mediguardian.notification.service.NotificationService;
 import com.mediguardian.profile.entity.Profile;
 import com.mediguardian.profile.repository.ProfileRepository;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -28,6 +30,7 @@ public class FamilyService {
     private final FamilyRepository familyRepository;
     private final FamilyMemberRepository familyMemberRepository;
     private final ProfileRepository profileRepository;
+    private final NotificationService notificationService;
 
     @Transactional
     public FamilyResponse createFamily(FamilyRequest request) {
@@ -86,8 +89,37 @@ public class FamilyService {
                 .profileId(targetProfile.getId())
                 .relationshipToHead(request.getRelationshipToHead())
                 .canViewMedicalHistory(request.isCanViewMedicalHistory())
+                .status(com.mediguardian.family.entity.FamilyMemberStatus.PENDING)
                 .build();
         familyMemberRepository.save(member);
+
+        // Send notification to the owner or guardian of the target profile
+        UUID targetAccountId = null;
+        if (targetProfile.getAccountId() != null) {
+            targetAccountId = targetProfile.getAccountId();
+        } else {
+            // It's a dependent, find their primary family head
+            Optional<FamilyMember> targetFamilyMembership = familyMemberRepository.findByProfileId(targetProfile.getId()).stream().findFirst();
+            if (targetFamilyMembership.isPresent()) {
+                Family targetFamily = familyRepository.findById(targetFamilyMembership.get().getFamilyId()).orElse(null);
+                if (targetFamily != null) {
+                    Profile targetHeadProfile = profileRepository.findById(targetFamily.getHeadProfileId()).orElse(null);
+                    if (targetHeadProfile != null) {
+                        targetAccountId = targetHeadProfile.getAccountId();
+                    }
+                }
+            }
+        }
+        
+        if (targetAccountId != null) {
+            String profileName = (targetProfile.getFirstName() != null ? targetProfile.getFirstName() : "") + " " + 
+                                 (targetProfile.getLastName() != null ? targetProfile.getLastName() : "");
+            String headName = (headProfile.getFirstName() != null ? headProfile.getFirstName() : "") + " " + 
+                              (headProfile.getLastName() != null ? headProfile.getLastName() : "");
+            String message = String.format("Family Head %s has invited %s to join their family group. Please approve or reject this request.", 
+                                           headName.trim(), profileName.trim());
+            notificationService.createNotification(targetAccountId, message);
+        }
 
         return mapToResponse(family);
     }
@@ -142,8 +174,27 @@ public class FamilyService {
         Family family = familyRepository.findById(familyId)
                 .orElseThrow(() -> new BusinessException("Family not found", ErrorCodes.NOT_FOUND));
 
-        if (!family.getHeadProfileId().equals(headProfile.getId())) {
-            throw new BusinessException("Only the Head of the Family can approve members", ErrorCodes.FORBIDDEN);
+        Profile targetProfile = profileRepository.findById(memberProfileId)
+                .orElseThrow(() -> new BusinessException("Member profile not found", ErrorCodes.NOT_FOUND));
+
+        boolean hasPermission = false;
+        if (targetProfile.getAccountId() != null && targetProfile.getAccountId().equals(accountId)) {
+            hasPermission = true;
+        } else {
+            // Check if current user is head of any family that targetProfile belongs to
+            boolean isGuardian = familyMemberRepository.findByProfileId(memberProfileId).stream()
+                    .map(FamilyMember::getFamilyId)
+                    .map(familyRepository::findById)
+                    .filter(Optional::isPresent)
+                    .map(Optional::get)
+                    .anyMatch(f -> f.getHeadProfileId().equals(headProfile.getId()));
+            if (isGuardian) {
+                hasPermission = true;
+            }
+        }
+
+        if (!hasPermission) {
+            throw new BusinessException("Only the invited user or their guardian can approve members", ErrorCodes.FORBIDDEN);
         }
 
         FamilyMember member = familyMemberRepository.findByFamilyIdAndProfileId(familyId, memberProfileId)
@@ -165,8 +216,27 @@ public class FamilyService {
         Family family = familyRepository.findById(familyId)
                 .orElseThrow(() -> new BusinessException("Family not found", ErrorCodes.NOT_FOUND));
 
-        if (!family.getHeadProfileId().equals(headProfile.getId())) {
-            throw new BusinessException("Only the Head of the Family can reject members", ErrorCodes.FORBIDDEN);
+        Profile targetProfile = profileRepository.findById(memberProfileId)
+                .orElseThrow(() -> new BusinessException("Member profile not found", ErrorCodes.NOT_FOUND));
+
+        boolean hasPermission = false;
+        if (targetProfile.getAccountId() != null && targetProfile.getAccountId().equals(accountId)) {
+            hasPermission = true;
+        } else {
+            // Check if current user is head of any family that targetProfile belongs to
+            boolean isGuardian = familyMemberRepository.findByProfileId(memberProfileId).stream()
+                    .map(FamilyMember::getFamilyId)
+                    .map(familyRepository::findById)
+                    .filter(Optional::isPresent)
+                    .map(Optional::get)
+                    .anyMatch(f -> f.getHeadProfileId().equals(headProfile.getId()));
+            if (isGuardian) {
+                hasPermission = true;
+            }
+        }
+
+        if (!hasPermission) {
+            throw new BusinessException("Only the invited user or their guardian can reject members", ErrorCodes.FORBIDDEN);
         }
 
         FamilyMember member = familyMemberRepository.findByFamilyIdAndProfileId(familyId, memberProfileId)
