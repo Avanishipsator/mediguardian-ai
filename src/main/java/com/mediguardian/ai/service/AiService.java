@@ -23,6 +23,10 @@ public class AiService {
     private final ChatClient chatClient;
     private final ProfileRepository profileRepository;
     private final MedicalRecordRepository medicalRecordRepository;
+    @org.springframework.beans.factory.annotation.Value("${spring.ai.openai.api-key:null}")
+    private String configuredApiKey;
+
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(AiService.class);
 
     public String testConnection() {
         try {
@@ -31,7 +35,9 @@ public class AiService {
                     .call()
                     .content();
         } catch (Exception e) {
-            throw new BusinessException("Failed to connect to AI: " + e.getMessage(), ErrorCodes.INTERNAL_SERVER_ERROR);
+            String errorMsg = "Failed to connect to AI using API Key [" + configuredApiKey + "]. Error: " + e.getMessage();
+            log.error(errorMsg, e);
+            throw new BusinessException(errorMsg, ErrorCodes.INTERNAL_SERVER_ERROR);
         }
     }
 
