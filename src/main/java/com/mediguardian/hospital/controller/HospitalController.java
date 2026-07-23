@@ -30,21 +30,21 @@ public class HospitalController {
     private final HospitalService hospitalService;
 
     @Operation(summary = "Search patient by mobile number")
-    @PreAuthorize("hasAnyAuthority('HOSPITAL', 'DOCTOR')")
+    @PreAuthorize("hasAnyRole('HOSPITAL', 'DOCTOR')")
     @GetMapping("/patients/search")
     public ResponseEntity<PatientSearchResponse> searchPatient(@RequestParam String mobileNumber) {
         return ResponseEntity.ok(hospitalService.searchPatientByMobile(mobileNumber));
     }
 
     @Operation(summary = "Get recent emergency scans by doctor")
-    @PreAuthorize("hasAnyAuthority('HOSPITAL', 'DOCTOR')")
+    @PreAuthorize("hasAnyRole('HOSPITAL', 'DOCTOR')")
     @GetMapping("/scanned-history")
     public ResponseEntity<List<ScanHistory>> getScanHistory(@RequestParam(defaultValue = "10") int limit) {
         return ResponseEntity.ok(hospitalService.getRecentScanHistory(limit));
     }
 
     @Operation(summary = "Register newborn without account")
-    @PreAuthorize("hasAnyAuthority('HOSPITAL', 'DOCTOR')")
+    @PreAuthorize("hasAnyRole('HOSPITAL', 'DOCTOR')")
     @PostMapping("/newborn")
     public ResponseEntity<UUID> registerNewborn(@RequestBody NewbornRegistrationRequest request) {
         return ResponseEntity.ok(hospitalService.registerNewborn(request));
