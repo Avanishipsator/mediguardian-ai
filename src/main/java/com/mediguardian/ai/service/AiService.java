@@ -56,7 +56,13 @@ public class AiService {
         PromptTemplate template = new PromptTemplate(promptText);
         Prompt prompt = template.create(Map.of("records", recordsSummary, "condition", condition));
 
-        return chatClient.prompt(prompt).call().content();
+        try {
+            return chatClient.prompt(prompt).call().content();
+        } catch (Exception e) {
+            System.err.println("AI Service Error in analyzeProgress: " + e.getMessage());
+            e.printStackTrace();
+            throw new BusinessException("AI Assistant is currently unavailable. Please verify API keys and configuration on the server.", ErrorCodes.INTERNAL_SERVER_ERROR);
+        }
     }
 
     public String chatWithEmergencyProfile(UUID emergencyId, String doctorQuestion) {
@@ -99,6 +105,12 @@ public class AiService {
         PromptTemplate template = new PromptTemplate(promptText);
         Prompt prompt = template.create(Map.of("patientContext", patientContext, "doctorQuestion", doctorQuestion));
 
-        return chatClient.prompt(prompt).call().content();
+        try {
+            return chatClient.prompt(prompt).call().content();
+        } catch (Exception e) {
+            System.err.println("AI Service Error in chatWithEmergencyProfile: " + e.getMessage());
+            e.printStackTrace();
+            throw new BusinessException("AI Assistant is currently unavailable. Please verify API keys and configuration on the server.", ErrorCodes.INTERNAL_SERVER_ERROR);
+        }
     }
 }
