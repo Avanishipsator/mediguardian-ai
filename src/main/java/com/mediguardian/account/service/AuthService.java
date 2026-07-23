@@ -73,7 +73,7 @@ public class AuthService {
                 .role(request.getRole())
                 .build();
                 
-        accountRepository.save(account);
+        account = accountRepository.save(account);
         
         // If it's a PATIENT (USER) or DOCTOR, create Profile and Family group
         if (request.getRole() == com.mediguardian.account.entity.Role.USER || request.getRole() == com.mediguardian.account.entity.Role.DOCTOR) {
