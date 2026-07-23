@@ -93,6 +93,25 @@ public class AuthService {
                 .role(account.getRole().name())
                 .build();
     }
+    
+    @Transactional
+    public Account registerForClaim(RegisterRequest request) {
+        if (request.getEmail() != null && accountRepository.existsByEmail(request.getEmail())) {
+            throw new BusinessException("Email already in use", ErrorCodes.VALIDATION_ERROR);
+        }
+        if (request.getMobileNumber() != null && accountRepository.existsByMobileNumber(request.getMobileNumber())) {
+            throw new BusinessException("Mobile number already in use", ErrorCodes.VALIDATION_ERROR);
+        }
+
+        var account = Account.builder()
+                .email(request.getEmail())
+                .mobileNumber(request.getMobileNumber())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .role(request.getRole())
+                .build();
+                
+        return accountRepository.save(account);
+    }
 
     public AuthResponse authenticate(AuthRequest request) {
         authenticationManager.authenticate(

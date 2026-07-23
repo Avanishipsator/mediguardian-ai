@@ -187,10 +187,7 @@ public class ProfileService {
         registerRequest.setPassword(request.getTemporaryPassword());
         registerRequest.setRole(Role.USER);
 
-        authService.register(registerRequest);
-
-        Account account = accountRepository.findByEmailOrMobileNumber(request.getEmail())
-                .orElseThrow(() -> new BusinessException("Failed to retrieve created account", ErrorCodes.INTERNAL_SERVER_ERROR));
+        Account account = authService.registerForClaim(registerRequest);
 
         profile.setAccountId(account.getId());
         profileRepository.save(profile);
