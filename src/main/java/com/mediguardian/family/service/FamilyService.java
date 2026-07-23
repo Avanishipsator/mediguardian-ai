@@ -187,6 +187,7 @@ public class FamilyService {
                     .relationshipToHead(m.getRelationshipToHead())
                     .canViewMedicalHistory(m.isCanViewMedicalHistory())
                     .status(m.getStatus())
+                    .isDependent(p != null && p.getAccountId() == null)
                     .build();
         }).collect(Collectors.toList());
 

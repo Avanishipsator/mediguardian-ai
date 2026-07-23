@@ -23,5 +23,6 @@ public class FamilyResponse {
         private Relationship relationshipToHead;
         private boolean canViewMedicalHistory;
         private com.mediguardian.family.entity.FamilyMemberStatus status;
+        private boolean isDependent;
     }
 }
