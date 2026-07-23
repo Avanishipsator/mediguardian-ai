@@ -1,6 +1,7 @@
 package com.mediguardian.account.entity;
 
 import com.mediguardian.core.common.BaseEntity;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -20,6 +21,7 @@ public class Account extends BaseEntity {
     private String mobileNumber;
 
     @Column(nullable = false)
+    @JsonIgnore
     private String password;
 
     @Enumerated(EnumType.STRING)
