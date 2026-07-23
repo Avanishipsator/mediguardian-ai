@@ -46,6 +46,12 @@ public class FamilyController {
         return ResponseEntity.ok(ApiResponse.success(familyService.getMyFamilies(), "Families retrieved successfully"));
     }
 
+    @GetMapping("/invites/me")
+    @Operation(summary = "Get all pending family invites for the authenticated user and their dependents")
+    public ResponseEntity<ApiResponse<List<com.mediguardian.family.dto.FamilyInviteDto>>> getMyPendingInvites() {
+        return ResponseEntity.ok(ApiResponse.success(familyService.getMyPendingInvites(), "Pending invites retrieved successfully"));
+    }
+
     @DeleteMapping("/{familyId}/members/{profileId}")
     @Operation(summary = "Remove a family member (Only for Family Head)")
     public ResponseEntity<ApiResponse<Void>> removeFamilyMember(

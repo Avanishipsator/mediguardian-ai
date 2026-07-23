@@ -4,6 +4,7 @@ import com.mediguardian.core.common.ErrorCodes;
 import com.mediguardian.core.common.SecurityUtils;
 import com.mediguardian.core.exception.BusinessException;
 import com.mediguardian.family.dto.AddFamilyMemberRequest;
+import com.mediguardian.family.dto.FamilyInviteDto;
 import com.mediguardian.family.dto.FamilyRequest;
 import com.mediguardian.family.dto.FamilyResponse;
 import com.mediguardian.family.entity.Family;
@@ -138,6 +139,52 @@ public class FamilyService {
                 .filter(java.util.Objects::nonNull)
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
+    }
+
+    public List<FamilyInviteDto> getMyPendingInvites() {
+        UUID accountId = SecurityUtils.getCurrentAccountId()
+                .orElseThrow(() -> new BusinessException("User not authenticated", ErrorCodes.UNAUTHORIZED));
+
+        Profile headProfile = profileRepository.findByAccountId(accountId)
+                .orElseThrow(() -> new BusinessException("Primary profile not found.", ErrorCodes.NOT_FOUND));
+
+        // Find all families where current user is the Head
+        List<Family> myFamilies = familyRepository.findByHeadProfileId(headProfile.getId());
+        List<UUID> myFamilyIds = myFamilies.stream().map(Family::getId).collect(Collectors.toList());
+
+        // Find all dependents in those families
+        List<Profile> managedProfiles = new java.util.ArrayList<>();
+        managedProfiles.add(headProfile);
+        
+        for (UUID famId : myFamilyIds) {
+            List<FamilyMember> members = familyMemberRepository.findByFamilyId(famId);
+            for (FamilyMember m : members) {
+                Profile p = profileRepository.findById(m.getProfileId()).orElse(null);
+                if (p != null && p.getAccountId() == null && !managedProfiles.contains(p)) {
+                    managedProfiles.add(p);
+                }
+            }
+        }
+        
+        List<UUID> managedProfileIds = managedProfiles.stream().map(Profile::getId).collect(Collectors.toList());
+
+        List<FamilyMember> pendingInvites = familyMemberRepository.findByProfileIdInAndStatus(
+                managedProfileIds, com.mediguardian.family.entity.FamilyMemberStatus.PENDING);
+
+        return pendingInvites.stream().map(invite -> {
+            Family requestingFamily = familyRepository.findById(invite.getFamilyId()).orElse(null);
+            Profile invitedProfile = profileRepository.findById(invite.getProfileId()).orElse(null);
+            Profile requestingHead = requestingFamily != null ? profileRepository.findById(requestingFamily.getHeadProfileId()).orElse(null) : null;
+            
+            return FamilyInviteDto.builder()
+                    .familyId(invite.getFamilyId())
+                    .familyName(requestingFamily != null ? requestingFamily.getName() : "Unknown Family")
+                    .headName(requestingHead != null ? (requestingHead.getFirstName() + " " + requestingHead.getLastName()).trim() : "Unknown Head")
+                    .invitedProfileId(invite.getProfileId())
+                    .invitedProfileName(invitedProfile != null ? (invitedProfile.getFirstName() + " " + invitedProfile.getLastName()).trim() : "Unknown")
+                    .relationship(invite.getRelationshipToHead())
+                    .build();
+        }).collect(Collectors.toList());
     }
 
     @Transactional
