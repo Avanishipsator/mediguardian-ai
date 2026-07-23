@@ -98,4 +98,11 @@ public class ProfileController {
         profileService.uploadMyFingerprint(file);
         return ResponseEntity.ok(ApiResponse.success(null, "Fingerprint registered successfully"));
     }
+
+    @PostMapping("/maintenance/regenerate-qrcodes")
+    @Operation(summary = "Regenerate QR Codes for all existing profiles (Admin task)")
+    public ResponseEntity<ApiResponse<Void>> regenerateAllQrCodes() {
+        profileService.regenerateAllQrCodes();
+        return ResponseEntity.ok(ApiResponse.success(null, "Successfully regenerated and uploaded all QR codes"));
+    }
 }

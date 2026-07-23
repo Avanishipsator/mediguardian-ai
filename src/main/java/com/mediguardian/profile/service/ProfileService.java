@@ -23,6 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
+import java.util.List;
 
 @Service
 public class ProfileService {
@@ -154,6 +155,20 @@ public class ProfileService {
 
         profile = profileRepository.save(profile);
         return mapToResponse(profile);
+    }
+
+    public void regenerateAllQrCodes() {
+        List<Profile> allProfiles = profileRepository.findAll();
+        for (Profile profile : allProfiles) {
+            if (profile.getEmergencyId() != null) {
+                String emergencyUrl = "https://pal-web-app-omega.vercel.app/lookup?emergencyId=" + profile.getEmergencyId();
+                byte[] qrCodeBytes = qrCodeGenerator.generateQrCode(emergencyUrl, 250, 250);
+                String s3Key = "qrcodes/" + profile.getEmergencyId() + ".png";
+                storageService.uploadFile(qrCodeBytes, s3Key, "image/png");
+                profile.setQrCodeUrl(s3Key);
+                profileRepository.save(profile);
+            }
+        }
     }
 
     public ProfileResponse getMyProfile() {
