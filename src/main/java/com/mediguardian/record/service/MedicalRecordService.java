@@ -32,6 +32,7 @@ public class MedicalRecordService {
     private final com.mediguardian.family.repository.FamilyRepository familyRepository;
     private final StorageService storageService;
     private final NotificationService notificationService;
+    private final com.mediguardian.ai.service.AiExtractionService aiExtractionService;
 
     @Transactional
     public MedicalRecordResponse uploadRecord(UUID profileId, MultipartFile file, String title, RecordType type, String description) {
@@ -76,8 +77,7 @@ public class MedicalRecordService {
             String fileContent = new String(file.getBytes(), java.nio.charset.StandardCharsets.UTF_8);
             String textToAnalyze = fileContent.trim().isEmpty() ? description : fileContent;
             
-            com.mediguardian.core.common.SpringContext.getBean(com.mediguardian.ai.service.AiExtractionService.class)
-                    .extractDataPointsAsync(targetProfile, record, textToAnalyze);
+            aiExtractionService.extractDataPointsAsync(targetProfile, record, textToAnalyze);
         } catch (Exception e) {
             // Ignore error so upload succeeds
         }

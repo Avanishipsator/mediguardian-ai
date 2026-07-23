@@ -51,6 +51,6 @@ public class EmergencyController {
     @GetMapping("/scan-history")
     @PreAuthorize("hasRole('DOCTOR')")
     public ResponseEntity<ApiResponse<List<ScanHistoryDto>>> getScanHistory() {
-        return ResponseEntity.ok(ApiResponse.success("History fetched successfully", emergencyService.getDoctorScanHistory()));
+        return ResponseEntity.ok(ApiResponse.success(emergencyService.getDoctorScanHistory(), "History fetched successfully"));
     }
 }

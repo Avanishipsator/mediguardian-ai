@@ -28,7 +28,7 @@ public class InsuranceDetailsController {
     @PreAuthorize("@securityService.canAccessProfile(authentication, #profileId) or hasRole('DOCTOR')")
     public ResponseEntity<ApiResponse<InsuranceDetailsDto>> getInsuranceDetails(@PathVariable UUID profileId) {
         InsuranceDetailsDto details = insuranceDetailsService.getInsuranceDetails(profileId);
-        return ResponseEntity.ok(ApiResponse.success("Insurance details fetched successfully", details));
+        return ResponseEntity.ok(ApiResponse.success(details, "Insurance details fetched successfully"));
     }
 
     @Operation(summary = "Create or update insurance details for a profile")
@@ -38,6 +38,6 @@ public class InsuranceDetailsController {
             @PathVariable UUID profileId,
             @RequestBody InsuranceDetailsRequest request) {
         InsuranceDetailsDto details = insuranceDetailsService.saveOrUpdateInsuranceDetails(profileId, request);
-        return ResponseEntity.ok(ApiResponse.success("Insurance details saved successfully", details));
+        return ResponseEntity.ok(ApiResponse.success(details, "Insurance details saved successfully"));
     }
 }

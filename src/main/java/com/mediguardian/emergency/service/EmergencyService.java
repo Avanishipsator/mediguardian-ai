@@ -28,6 +28,7 @@ public class EmergencyService {
     private final NotificationService notificationService;
     private final AccountRepository accountRepository;
     private final com.mediguardian.profile.repository.InsuranceDetailsRepository insuranceDetailsRepository;
+    private final com.mediguardian.ai.service.AiService aiService;
 
     public EmergencyProfileResponse getEmergencyProfile(UUID emergencyId) {
         Profile profile = profileRepository.findByEmergencyId(emergencyId)
@@ -116,8 +117,7 @@ public class EmergencyService {
         // Only generate Triage for Doctors to save AI tokens and because Anonymous shouldn't see it
         if (isDoctor) {
             try {
-                String triage = com.mediguardian.core.common.SpringContext.getBean(com.mediguardian.ai.service.AiService.class)
-                    .generateTriageSummary(profile);
+                String triage = aiService.generateTriageSummary(profile);
                 response.setAiTriageSummary(triage);
             } catch (Exception e) {
                 // Ignore AI errors so emergency API doesn't fail

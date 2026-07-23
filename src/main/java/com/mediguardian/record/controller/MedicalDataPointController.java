@@ -36,6 +36,6 @@ public class MedicalDataPointController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
             
         List<MedicalDataPointDto> points = medicalDataPointService.getFilteredDataPoints(profileId, metricType, startDate, endDate);
-        return ResponseEntity.ok(ApiResponse.success("Medical data points fetched successfully", points));
+        return ResponseEntity.ok(ApiResponse.success(points, "Medical data points fetched successfully"));
     }
 }

@@ -15,6 +15,6 @@ public class InsuranceDetailsRequest {
     private String providerName;
     private String policyNumber;
     private String groupId;
-    private String coverageType;
+    private com.mediguardian.profile.entity.InsuranceType coverageType;
     private LocalDate expirationDate;
 }
