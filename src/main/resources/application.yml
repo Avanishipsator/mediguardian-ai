@@ -16,11 +16,12 @@ spring:
       hibernate:
         format_sql: true
   ai:
-    vertex:
-      ai:
-        gemini:
-          project-id: ${GEMINI_PROJECT_ID:mock-project-id}
-          location: ${GEMINI_LOCATION:us-central1}
+    openai:
+      api-key: ${GEMINI_API_KEY:mock-key}
+      base-url: https://generativelanguage.googleapis.com/v1beta/openai/
+      chat:
+        options:
+          model: gemini-1.5-pro
 
   servlet:
     multipart:
