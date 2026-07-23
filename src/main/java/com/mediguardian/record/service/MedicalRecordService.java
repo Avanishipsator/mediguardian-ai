@@ -89,9 +89,10 @@ public class MedicalRecordService {
         Profile targetProfile = profileRepository.findById(profileId)
                 .orElseThrow(() -> new BusinessException("Profile not found", ErrorCodes.NOT_FOUND));
 
-        verifyPermission(targetProfile);
+        AccessLevel level = determineAccessLevel(targetProfile);
 
         return recordRepository.findByProfileIdOrderByUploadDateDesc(profileId).stream()
+                .filter(record -> canViewRecord(record, level))
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
@@ -113,48 +114,70 @@ public class MedicalRecordService {
         return mapToResponse(record);
     }
 
-    private void verifyPermission(Profile targetProfile) {
+    private enum AccessLevel {
+        OWNER, DOCTOR, FAMILY_HEAD, FAMILY_SHARED, PUBLIC_ONLY
+    }
+
+    private AccessLevel determineAccessLevel(Profile targetProfile) {
         UUID currentAccountId = SecurityUtils.getCurrentAccountId()
                 .orElseThrow(() -> new BusinessException("User not authenticated", ErrorCodes.UNAUTHORIZED));
 
         if (currentAccountId.equals(targetProfile.getAccountId())) {
-            return; // User owns this profile
+            return AccessLevel.OWNER;
         }
 
-        boolean hasHospitalRole = SecurityUtils.hasRole("HOSPITAL") || SecurityUtils.hasRole("DOCTOR") || SecurityUtils.hasRole("LAB");
-        if (hasHospitalRole) {
-            return;
+        if (SecurityUtils.hasRole("HOSPITAL") || SecurityUtils.hasRole("DOCTOR") || SecurityUtils.hasRole("LAB")) {
+            return AccessLevel.DOCTOR;
         }
 
-        Profile currentProfile = profileRepository.findByAccountId(currentAccountId)
-                .orElseThrow(() -> new BusinessException("Your profile not found", ErrorCodes.NOT_FOUND));
-
-        List<FamilyMember> targetMemberships = familyMemberRepository.findByProfileId(targetProfile.getId());
-        List<FamilyMember> currentMemberships = familyMemberRepository.findByProfileId(currentProfile.getId());
-
-        boolean hasPermission = false;
-        
-        java.util.List<com.mediguardian.family.entity.Family> familiesWhereCurrentIsHead = familyRepository.findByHeadProfileId(currentProfile.getId());
-        
-        for (FamilyMember myMembership : currentMemberships) {
-            for (FamilyMember theirMembership : targetMemberships) {
-                if (myMembership.getFamilyId().equals(theirMembership.getFamilyId())) {
-                    if (theirMembership.isCanViewMedicalHistory()) {
-                        hasPermission = true;
-                        break;
-                    }
-                    // Current profile is head of this family
-                    for (com.mediguardian.family.entity.Family family : familiesWhereCurrentIsHead) {
-                        if (family.getId().equals(theirMembership.getFamilyId())) {
-                            hasPermission = true;
-                            break;
+        Profile currentProfile = profileRepository.findByAccountId(currentAccountId).orElse(null);
+        if (currentProfile != null) {
+            List<FamilyMember> targetMemberships = familyMemberRepository.findByProfileId(targetProfile.getId());
+            List<FamilyMember> currentMemberships = familyMemberRepository.findByProfileId(currentProfile.getId());
+            
+            java.util.List<com.mediguardian.family.entity.Family> familiesWhereCurrentIsHead = familyRepository.findByHeadProfileId(currentProfile.getId());
+            
+            for (FamilyMember myMembership : currentMemberships) {
+                for (FamilyMember theirMembership : targetMemberships) {
+                    if (myMembership.getFamilyId().equals(theirMembership.getFamilyId())) {
+                        for (com.mediguardian.family.entity.Family family : familiesWhereCurrentIsHead) {
+                            if (family.getId().equals(theirMembership.getFamilyId())) {
+                                return AccessLevel.FAMILY_HEAD;
+                            }
+                        }
+                        if (theirMembership.isCanViewMedicalHistory()) {
+                            return AccessLevel.FAMILY_SHARED;
                         }
                     }
                 }
             }
         }
+        return AccessLevel.PUBLIC_ONLY;
+    }
 
-        if (!hasPermission) {
+    private boolean canViewRecord(MedicalRecord record, AccessLevel level) {
+        if (record.getVisibility() == com.mediguardian.record.entity.RecordVisibility.PUBLIC) {
+            return true;
+        }
+        switch (level) {
+            case OWNER:
+                return true;
+            case DOCTOR:
+                return record.getVisibility() == com.mediguardian.record.entity.RecordVisibility.DOCTOR_SHARED;
+            case FAMILY_HEAD:
+                return record.getVisibility() == com.mediguardian.record.entity.RecordVisibility.FAMILY_HEAD_ONLY 
+                    || record.getVisibility() == com.mediguardian.record.entity.RecordVisibility.FAMILY_SHARED
+                    || record.getVisibility() == com.mediguardian.record.entity.RecordVisibility.DOCTOR_SHARED;
+            case FAMILY_SHARED:
+                return record.getVisibility() == com.mediguardian.record.entity.RecordVisibility.FAMILY_SHARED;
+            default:
+                return false;
+        }
+    }
+
+    private void verifyPermission(Profile targetProfile) {
+        AccessLevel level = determineAccessLevel(targetProfile);
+        if (level == AccessLevel.PUBLIC_ONLY) {
             throw new BusinessException("You do not have permission to access medical records for this profile", ErrorCodes.FORBIDDEN);
         }
     }

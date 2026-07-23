@@ -167,9 +167,8 @@ public class AiService {
         try {
             return chatClient.prompt(prompt).call().content();
         } catch (Exception e) {
-            System.err.println("AI Service Error in generateTriageSummary: " + e.getMessage());
-            e.printStackTrace();
-            throw new BusinessException("AI Assistant is currently unavailable.", ErrorCodes.INTERNAL_SERVER_ERROR);
+            log.error("AI Service Error in generateTriageSummary. API Key [{}]. Error: {}", configuredApiKey, e.getMessage(), e);
+            return "AI Triage Unavailable: Failed to connect to AI provider. Please verify your API Key configuration (Error: " + e.getMessage() + ")";
         }
     }
 }

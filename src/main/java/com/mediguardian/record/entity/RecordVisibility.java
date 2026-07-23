@@ -4,5 +4,6 @@ public enum RecordVisibility {
     PRIVATE,
     FAMILY_SHARED,
     DOCTOR_SHARED,
-    FAMILY_HEAD_ONLY
+    FAMILY_HEAD_ONLY,
+    PUBLIC
 }

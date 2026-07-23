@@ -1,8 +1,11 @@
 package com.mediguardian.ai.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mediguardian.core.exception.BusinessException;
 import com.mediguardian.core.common.ErrorCodes;
 import com.mediguardian.profile.entity.Profile;
+import com.mediguardian.profile.repository.ProfileRepository;
 import com.mediguardian.record.entity.MedicalDataPoint;
 import com.mediguardian.record.entity.MedicalRecord;
 import com.mediguardian.record.entity.MetricType;
@@ -20,18 +23,20 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 @Service
 public class AiExtractionService {
 
     private final ChatClient chatClient;
     private final MedicalDataPointRepository dataPointRepository;
+    private final ProfileRepository profileRepository;
+    private final ObjectMapper objectMapper;
     
-    public AiExtractionService(ChatClient.Builder builder, MedicalDataPointRepository dataPointRepository) {
+    public AiExtractionService(ChatClient.Builder builder, MedicalDataPointRepository dataPointRepository, ProfileRepository profileRepository, ObjectMapper objectMapper) {
         this.chatClient = builder.build();
         this.dataPointRepository = dataPointRepository;
+        this.profileRepository = profileRepository;
+        this.objectMapper = objectMapper;
     }
     
     @org.springframework.beans.factory.annotation.Value("${spring.ai.openai.api-key:null}")
@@ -49,34 +54,90 @@ public class AiExtractionService {
         try {
             String promptText = """
                     You are a medical AI assistant.
-                    A new medical report was uploaded. I need you to extract all quantitative metrics from this text and return them in a specific CSV format.
-                    For each metric, determine its standard metric type (CBC, LIPID_PANEL, LIVER_FUNCTION, KIDNEY_FUNCTION, BLOOD_SUGAR, THYROID, VITAMINS, VITALS, or OTHER).
-                    Also identify the standard desired/normal range based on standard medical guidelines for a patient.
+                    A new medical report or prescription was uploaded. 
+                    I need you to extract two things:
+                    1. Quantitative metrics in CSV format.
+                    2. Categorical profile data (allergies, conditions, medications, surgeries, implants, medicalDevices, vaccinations, familyHistory).
                     
+                    For the metrics, determine the standard metric type (CBC, LIPID_PANEL, LIVER_FUNCTION, KIDNEY_FUNCTION, BLOOD_SUGAR, THYROID, VITAMINS, VITALS, or OTHER).
+                    Also identify the standard desired/normal range based on standard medical guidelines.
+
                     Text: {text}
                     
-                    Return ONLY a CSV format with a header row:
-                    metricType,metricName,value,unit,normalRange
-                    
-                    Example output:
-                    CBC,Hemoglobin,12.5,g/dL,13.8-17.2
-                    LIPID_PANEL,Cholesterol,180,mg/dL,<200
+                    Return ONLY a valid JSON object with the following structure:
+                    {
+                      "csvData": "metricType,metricName,value,unit,normalRange\\nCBC,Hemoglobin,12.5,g/dL,13.8-17.2",
+                      "profileUpdates": {
+                         "allergies": ["Peanut"],
+                         "conditions": ["Asthma"],
+                         "medications": ["Albuterol"],
+                         "surgeries": [],
+                         "implants": [],
+                         "medicalDevices": [],
+                         "vaccinations": [],
+                         "familyHistory": []
+                      }
+                    }
                     """;
 
             PromptTemplate template = new PromptTemplate(promptText);
             Prompt prompt = template.create(Map.of("text", recordTextContent));
             
-            String csvResponse = chatClient.prompt(prompt).call().content();
+            String jsonResponse = chatClient.prompt(prompt).call().content();
             
-            parseAndSaveCsv(profile, record, csvResponse);
+            if (jsonResponse.startsWith("```json")) {
+                jsonResponse = jsonResponse.substring(7);
+            }
+            if (jsonResponse.endsWith("```")) {
+                jsonResponse = jsonResponse.substring(0, jsonResponse.length() - 3);
+            }
+            
+            JsonNode root = objectMapper.readTree(jsonResponse);
+            
+            String csvData = root.path("csvData").asText();
+            if (csvData != null && !csvData.isEmpty()) {
+                parseAndSaveCsv(profile, record, csvData);
+            }
+            
+            JsonNode profileUpdates = root.path("profileUpdates");
+            if (!profileUpdates.isMissingNode()) {
+                mergeProfileData(profile, profileUpdates);
+            }
             
         } catch (Exception e) {
             log.error("Failed to extract data points via AI. API Key [{}]. Error: {}", configuredApiKey, e.getMessage());
         }
     }
 
+    private void mergeProfileData(Profile profile, JsonNode updates) {
+        mergeList(profile.getAllergies(), updates.path("allergies"));
+        mergeList(profile.getConditions(), updates.path("conditions"));
+        mergeList(profile.getMedications(), updates.path("medications"));
+        mergeList(profile.getSurgeries(), updates.path("surgeries"));
+        mergeList(profile.getImplants(), updates.path("implants"));
+        mergeList(profile.getMedicalDevices(), updates.path("medicalDevices"));
+        mergeList(profile.getVaccinations(), updates.path("vaccinations"));
+        mergeList(profile.getFamilyHistory(), updates.path("familyHistory"));
+        
+        profileRepository.save(profile);
+    }
+    
+    private void mergeList(List<String> existing, JsonNode newItems) {
+        if (existing == null || newItems.isMissingNode() || !newItems.isArray()) return;
+        
+        for (JsonNode item : newItems) {
+            String val = item.asText().trim();
+            if (!val.isEmpty()) {
+                boolean exists = existing.stream().anyMatch(e -> e.equalsIgnoreCase(val));
+                if (!exists) {
+                    existing.add(val);
+                }
+            }
+        }
+    }
+
     private void parseAndSaveCsv(Profile profile, MedicalRecord record, String csv) {
-        String[] lines = csv.split("\n");
+        String[] lines = csv.split("\\n");
         for (int i = 1; i < lines.length; i++) {
             String line = lines[i].trim();
             if (line.isEmpty() || line.startsWith("`")) continue;
@@ -90,7 +151,6 @@ public class AiExtractionService {
                     String unit = parts[3].trim();
                     String normalRange = parts[4].trim();
                     
-                    // Determine trend
                     TrendStatus trend = calculateTrend(profile.getId(), name, value);
                     
                     MedicalDataPoint dataPoint = MedicalDataPoint.builder()
@@ -125,11 +185,6 @@ public class AiExtractionService {
             
             if (current == previous) return TrendStatus.STABLE;
             
-            // This is a naive heuristic (e.g. higher isn't always better/worse).
-            // A more advanced prompt can ask the AI to determine improving/deteriorating based on the normal range.
-            // For now, if it moves closer to the normal range, we can say improving, else deteriorating.
-            // In a real production scenario, the AI should explicitly assess the trend.
-            // For simplicity, we'll ask the AI in the future or keep it simple here.
             return (current > previous) ? TrendStatus.IMPROVING : TrendStatus.DETERIORATING; 
         } catch (NumberFormatException e) {
             return TrendStatus.UNKNOWN;
