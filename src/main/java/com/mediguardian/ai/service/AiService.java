@@ -165,7 +165,11 @@ public class AiService {
         Prompt prompt = template.create(Map.of("patientContext", patientContext));
 
         try {
-            return chatClient.prompt(prompt).call().content();
+            return java.util.concurrent.CompletableFuture.supplyAsync(() -> chatClient.prompt(prompt).call().content())
+                    .get(5, java.util.concurrent.TimeUnit.SECONDS);
+        } catch (java.util.concurrent.TimeoutException e) {
+            log.warn("AI Service timed out after 5 seconds while generating triage summary.");
+            return "AI Triage Unavailable: The AI service took too long to respond (Timeout > 5s).";
         } catch (Exception e) {
             log.error("AI Service Error in generateTriageSummary. API Key [{}]. Error: {}", configuredApiKey, e.getMessage(), e);
             return "AI Triage Unavailable: Failed to connect to AI provider. Please verify your API Key configuration (Error: " + e.getMessage() + ")";
