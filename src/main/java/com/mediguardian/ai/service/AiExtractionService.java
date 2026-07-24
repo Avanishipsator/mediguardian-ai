@@ -24,6 +24,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import org.apache.pdfbox.Loader;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.text.PDFTextStripper;
+import org.springframework.ai.chat.messages.UserMessage;
+import org.springframework.ai.chat.messages.Media;
+import org.springframework.util.MimeTypeUtils;
+
 @Service
 public class AiExtractionService {
 
@@ -46,8 +53,8 @@ public class AiExtractionService {
 
     @Async
     @Transactional
-    public void extractDataPointsAsync(Profile profile, MedicalRecord record, String recordTextContent) {
-        if (recordTextContent == null || recordTextContent.trim().isEmpty()) {
+    public void extractDataPointsAsync(Profile profile, MedicalRecord record, byte[] fileBytes, String fileExtension, String fallbackDescription) {
+        if (fileBytes == null || fileBytes.length == 0) {
             return;
         }
 
@@ -61,8 +68,6 @@ public class AiExtractionService {
                     
                     For the metrics, determine the standard metric type (CBC, LIPID_PANEL, LIVER_FUNCTION, KIDNEY_FUNCTION, BLOOD_SUGAR, THYROID, VITAMINS, VITALS, or OTHER).
                     Also identify the standard desired/normal range based on standard medical guidelines.
-
-                    Text: {text}
                     
                     Return ONLY a valid JSON object with the following structure:
                     {
@@ -80,10 +85,38 @@ public class AiExtractionService {
                     }
                     """;
 
-            PromptTemplate template = new PromptTemplate(promptText);
-            Prompt prompt = template.create(Map.of("text", recordTextContent));
-            
-            String jsonResponse = chatClient.prompt(prompt).call().content();
+            String jsonResponse;
+
+            if (".pdf".equalsIgnoreCase(fileExtension)) {
+                // 1. Extract text from PDF using PDFBox
+                try (PDDocument document = Loader.loadPDF(fileBytes)) {
+                    PDFTextStripper stripper = new PDFTextStripper();
+                    String extractedText = stripper.getText(document);
+                    
+                    if (extractedText == null || extractedText.trim().isEmpty()) {
+                        extractedText = fallbackDescription;
+                    }
+                    
+                    String fullPrompt = promptText + "\n\nText: " + extractedText;
+                    jsonResponse = chatClient.prompt(new PromptTemplate(fullPrompt).create()).call().content();
+                }
+            } else if (".jpg".equalsIgnoreCase(fileExtension) || ".jpeg".equalsIgnoreCase(fileExtension) || ".png".equalsIgnoreCase(fileExtension)) {
+                // 2. Multimodal Image Analysis via Gemini
+                org.springframework.util.MimeType mimeType = ".png".equalsIgnoreCase(fileExtension) ? MimeTypeUtils.IMAGE_PNG : MimeTypeUtils.IMAGE_JPEG;
+                Media media = new Media(mimeType, fileBytes);
+                
+                UserMessage userMessage = new UserMessage(promptText, List.of(media));
+                Prompt prompt = new Prompt(userMessage);
+                jsonResponse = chatClient.prompt(prompt).call().content();
+            } else {
+                // 3. Fallback to description or raw text
+                String text = new String(fileBytes, java.nio.charset.StandardCharsets.UTF_8);
+                if (text.trim().isEmpty() || text.contains("\u0000")) {
+                    text = fallbackDescription;
+                }
+                String fullPrompt = promptText + "\n\nText: " + text;
+                jsonResponse = chatClient.prompt(new PromptTemplate(fullPrompt).create()).call().content();
+            }
             
             if (jsonResponse.startsWith("```json")) {
                 jsonResponse = jsonResponse.substring(7);
@@ -105,7 +138,7 @@ public class AiExtractionService {
             }
             
         } catch (Exception e) {
-            log.error("Failed to extract data points via AI. API Key [{}]. Error: {}", configuredApiKey, e.getMessage());
+            log.error("Failed to extract data points via AI. API Key [{}]. Error: {}", configuredApiKey, e.getMessage(), e);
             profile.setAiProfileExtractionStatus("Failed: " + e.getMessage());
             profileRepository.save(profile);
         }

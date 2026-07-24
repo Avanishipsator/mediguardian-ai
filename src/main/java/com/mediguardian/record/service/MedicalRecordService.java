@@ -73,12 +73,7 @@ public class MedicalRecordService {
 
         // Trigger AI Extraction
         try {
-            // In a real application, we would run OCR on the file or extract text from a PDF.
-            // For the hackathon/demo, we'll extract text if it's a txt file, or use the description as a fallback prompt.
-            String fileContent = new String(file.getBytes(), java.nio.charset.StandardCharsets.UTF_8);
-            String textToAnalyze = fileContent.trim().isEmpty() ? description : fileContent;
-            
-            aiExtractionService.extractDataPointsAsync(targetProfile, record, textToAnalyze);
+            aiExtractionService.extractDataPointsAsync(targetProfile, record, file.getBytes(), fileExtension, description);
             aiService.updateTriageSummaryAsync(targetProfile.getId());
         } catch (Exception e) {
             // Ignore error so upload succeeds
