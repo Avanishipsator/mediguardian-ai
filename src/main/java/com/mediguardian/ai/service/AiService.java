@@ -131,7 +131,24 @@ public class AiService {
         }
     }
 
-    public String generateTriageSummary(Profile profile) {
+    @org.springframework.scheduling.annotation.Async
+    @org.springframework.transaction.annotation.Transactional
+    public void updateTriageSummaryAsync(UUID profileId) {
+        Profile profile = profileRepository.findById(profileId).orElse(null);
+        if (profile == null) return;
+        
+        try {
+            String summary = generateTriageSummary(profile);
+            profile.setAiTriageSummary(summary);
+        } catch (Exception e) {
+            log.warn("Failed to generate triage summary for profile {}: {}", profileId, e.getMessage());
+            profile.setAiTriageSummary(null);
+            profile.setAiProfileExtractionStatus("Triage Summary Failed: " + e.getMessage());
+        }
+        profileRepository.save(profile);
+    }
+
+    private String generateTriageSummary(Profile profile) {
         List<MedicalRecord> records = medicalRecordRepository.findByProfileIdOrderByUploadDateDesc(profile.getId());
         String recordsSummary = records.isEmpty() ? "None" : records.stream()
                 .map(r -> String.format("- %s (Date: %s): %s", r.getTitle(), r.getUploadDate(), r.getDescription()))
@@ -166,13 +183,13 @@ public class AiService {
 
         try {
             return java.util.concurrent.CompletableFuture.supplyAsync(() -> chatClient.prompt(prompt).call().content())
-                    .get(5, java.util.concurrent.TimeUnit.SECONDS);
+                    .get(15, java.util.concurrent.TimeUnit.SECONDS);
         } catch (java.util.concurrent.TimeoutException e) {
-            log.warn("AI Service timed out after 5 seconds while generating triage summary.");
-            return "AI Triage Unavailable: The AI service took too long to respond (Timeout > 5s).";
+            log.warn("AI Service timed out while generating triage summary.");
+            throw new BusinessException("AI Triage Unavailable: Timeout", ErrorCodes.INTERNAL_SERVER_ERROR);
         } catch (Exception e) {
-            log.error("AI Service Error in generateTriageSummary. API Key [{}]. Error: {}", configuredApiKey, e.getMessage(), e);
-            return "AI Triage Unavailable: Failed to connect to AI provider. Please verify your API Key configuration (Error: " + e.getMessage() + ")";
+            log.error("AI Service Error in generateTriageSummary. API Key [{}]. Error: {}", configuredApiKey, e.getMessage());
+            throw new BusinessException("AI Triage Unavailable: Failed to connect", ErrorCodes.INTERNAL_SERVER_ERROR);
         }
     }
 }

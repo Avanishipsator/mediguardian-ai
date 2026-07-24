@@ -106,6 +106,8 @@ public class AiExtractionService {
             
         } catch (Exception e) {
             log.error("Failed to extract data points via AI. API Key [{}]. Error: {}", configuredApiKey, e.getMessage());
+            profile.setAiProfileExtractionStatus("Failed: " + e.getMessage());
+            profileRepository.save(profile);
         }
     }
 

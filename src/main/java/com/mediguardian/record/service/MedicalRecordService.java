@@ -33,6 +33,7 @@ public class MedicalRecordService {
     private final StorageService storageService;
     private final NotificationService notificationService;
     private final com.mediguardian.ai.service.AiExtractionService aiExtractionService;
+    private final com.mediguardian.ai.service.AiService aiService;
 
     @Transactional
     public MedicalRecordResponse uploadRecord(UUID profileId, MultipartFile file, String title, RecordType type, String description) {
@@ -78,6 +79,7 @@ public class MedicalRecordService {
             String textToAnalyze = fileContent.trim().isEmpty() ? description : fileContent;
             
             aiExtractionService.extractDataPointsAsync(targetProfile, record, textToAnalyze);
+            aiService.updateTriageSummaryAsync(targetProfile.getId());
         } catch (Exception e) {
             // Ignore error so upload succeeds
         }

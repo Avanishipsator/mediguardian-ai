@@ -118,6 +118,12 @@ public class Profile extends BaseEntity {
     private String qrCodeUrl;
 
     private String profilePhotoUrl;
+    
+    @Column(columnDefinition = "TEXT")
+    private String aiTriageSummary;
+
+    @Column(columnDefinition = "TEXT")
+    private String aiProfileExtractionStatus;
 
     @Column(columnDefinition = "bytea")
     private byte[] fingerprintTemplate; // Serialized SourceAFIS template

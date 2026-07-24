@@ -114,14 +114,9 @@ public class EmergencyService {
                     .build());
         });
                 
-        // Only generate Triage for Doctors to save AI tokens and because Anonymous shouldn't see it
+        // Fetch pre-computed AI Triage Summary if requested by a doctor
         if (isDoctor) {
-            try {
-                String triage = aiService.generateTriageSummary(profile);
-                response.setAiTriageSummary(triage);
-            } catch (Exception e) {
-                // Ignore AI errors so emergency API doesn't fail
-            }
+            response.setAiTriageSummary(profile.getAiTriageSummary());
         }
         
         return response;
