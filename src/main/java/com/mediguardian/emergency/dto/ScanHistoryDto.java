@@ -12,5 +12,6 @@ public class ScanHistoryDto {
     private UUID id;
     private UUID scannedProfileId;
     private String scannedProfileName;
+    private String scannedProfileEmergencyId;
     private Instant scanTime;
 }

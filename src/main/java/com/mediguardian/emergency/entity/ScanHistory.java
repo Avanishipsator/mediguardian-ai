@@ -38,4 +38,10 @@ public class ScanHistory extends BaseEntity {
 
     @Column(nullable = false)
     private Instant scanTime;
+
+    @Column
+    private String scannedProfileName;
+
+    @Column
+    private String scannedProfileEmergencyId;
 }

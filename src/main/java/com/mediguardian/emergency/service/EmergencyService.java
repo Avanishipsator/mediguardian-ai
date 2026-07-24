@@ -44,6 +44,8 @@ public class EmergencyService {
                     .doctorAccountId(accountId)
                     .scannedProfileId(profile.getId())
                     .scanTime(Instant.now())
+                    .scannedProfileName(profile.getFirstName() + " " + profile.getLastName())
+                    .scannedProfileEmergencyId(profile.getEmergencyId() != null ? profile.getEmergencyId().toString() : null)
                     .build();
             scanHistoryRepository.save(history);
             
@@ -129,12 +131,20 @@ public class EmergencyService {
         return scanHistoryRepository.findByDoctorAccountIdOrderByScanTimeDesc(accountId, org.springframework.data.domain.PageRequest.of(0, 20))
                 .stream()
                 .map(history -> {
-                    Profile profile = profileRepository.findById(history.getScannedProfileId()).orElse(null);
-                    String name = profile != null ? profile.getFirstName() + " " + profile.getLastName() : "Unknown";
+                    String name = history.getScannedProfileName();
+                    String emergencyId = history.getScannedProfileEmergencyId();
+                    
+                    if (name == null) {
+                        Profile profile = profileRepository.findById(history.getScannedProfileId()).orElse(null);
+                        name = profile != null ? profile.getFirstName() + " " + profile.getLastName() : "Unknown";
+                        emergencyId = (profile != null && profile.getEmergencyId() != null) ? profile.getEmergencyId().toString() : null;
+                    }
+                    
                     return com.mediguardian.emergency.dto.ScanHistoryDto.builder()
                             .id(history.getId())
                             .scannedProfileId(history.getScannedProfileId())
                             .scannedProfileName(name)
+                            .scannedProfileEmergencyId(emergencyId)
                             .scanTime(history.getScanTime())
                             .build();
                 })
