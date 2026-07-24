@@ -73,10 +73,28 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error(ErrorCodes.UNAUTHORIZED.getCode(), ErrorCodes.UNAUTHORIZED.getDefaultMessage()));
     }
 
+    @ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiResponse<Void>> handleHttpMessageNotReadableException(org.springframework.http.converter.HttpMessageNotReadableException ex) {
+        Throwable cause = ex.getCause();
+        if (cause instanceof com.fasterxml.jackson.databind.exc.InvalidFormatException ife) {
+            if (ife.getTargetType() != null && ife.getTargetType().isEnum()) {
+                String expectedValues = java.util.Arrays.stream(ife.getTargetType().getEnumConstants())
+                        .map(Object::toString)
+                        .collect(Collectors.joining(", "));
+                String message = String.format("Invalid value '%s'. Accepted values are: [%s]", 
+                        ife.getValue(), expectedValues);
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(ApiResponse.error(ErrorCodes.VALIDATION_ERROR.getCode(), message));
+            }
+        }
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error(ErrorCodes.VALIDATION_ERROR.getCode(), "Malformed JSON request: " + (cause != null ? cause.getMessage() : ex.getMessage())));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGenericException(Exception ex) {
         log.error("Unexpected error", ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiResponse.error(ErrorCodes.INTERNAL_SERVER_ERROR.getCode(), ErrorCodes.INTERNAL_SERVER_ERROR.getDefaultMessage()));
+                .body(ApiResponse.error(ErrorCodes.INTERNAL_SERVER_ERROR.getCode(), ex.getMessage() != null ? ex.getMessage() : "An unexpected error occurred"));
     }
 }
